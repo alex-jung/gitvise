@@ -1,10 +1,10 @@
 services:
   api:
     image: node:22-alpine
+    user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     volumes:
       - ./apps/api:/app
-      - api_node_modules:/app/node_modules
     ports:
       - "3001:3001"
     environment:
@@ -15,10 +15,10 @@ services:
 
   web:
     image: node:22-alpine
+    user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     volumes:
       - ./apps/web:/app
-      - web_node_modules:/app/node_modules
     ports:
       - "3000:3000"
     environment:
@@ -31,10 +31,10 @@ services:
 
   landing:
     image: node:22-alpine
+    user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     volumes:
       - ./apps/landing:/app
-      - landing_node_modules:/app/node_modules
     ports:
       - "3002:3002"
     environment:
@@ -43,8 +43,3 @@ services:
     profiles:
       - landing
     restart: unless-stopped
-
-volumes:
-  api_node_modules:
-  web_node_modules:
-  landing_node_modules:
