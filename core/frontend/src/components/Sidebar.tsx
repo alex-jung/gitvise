@@ -71,6 +71,8 @@ export function Sidebar() {
     ? "var(--sidebar-width-collapsed)"
     : "var(--sidebar-width-expanded)";
 
+  const close = () => setMobileOpen(false);
+
   const sidebarContent = (
     <aside
       style={{
@@ -119,6 +121,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={close}
               title={collapsed ? item.label : undefined}
               style={{
                 display: "flex",
@@ -166,6 +169,7 @@ export function Sidebar() {
       <div style={{ borderTop: "1px solid var(--color-border)", padding: "var(--space-2)" }}>
         <Link
           href="/settings"
+          onClick={close}
           title={collapsed ? "Settings" : undefined}
           style={{
             display: "flex",
@@ -216,50 +220,53 @@ export function Sidebar() {
 
       {/* Mobile: hamburger + overlay */}
       <div className="lg:hidden">
-        <button
-          onClick={() => setMobileOpen(true)}
-          style={{
-            position: "fixed",
-            top: "var(--space-4)",
-            left: "var(--space-4)",
-            zIndex: 200,
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "var(--space-2)",
-            cursor: "pointer",
-            color: "var(--color-text-primary)",
-            lineHeight: 1,
-          }}
-        >
-          ☰
-        </button>
+        {/* Hamburger – hidden when menu is open (overlay takes over) */}
+        {!mobileOpen && (
+          <button
+            onClick={() => setMobileOpen(true)}
+            style={{
+              position: "fixed",
+              top: "var(--space-4)",
+              left: "var(--space-4)",
+              zIndex: 200,
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-2)",
+              cursor: "pointer",
+              color: "var(--color-text-primary)",
+              lineHeight: 1,
+            }}
+          >
+            ☰
+          </button>
+        )}
 
+        {/* Full-screen overlay – pointerDown on backdrop closes instantly */}
         {mobileOpen && (
-          <>
+          <div
+            onPointerDown={() => setMobileOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              zIndex: 150,
+            }}
+          >
             <div
-              onClick={() => setMobileOpen(false)}
+              onPointerDown={(e) => e.stopPropagation()}
               style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,0.6)",
-                zIndex: 150,
-              }}
-            />
-            <div
-              style={{
-                position: "fixed",
+                position: "absolute",
                 top: 0,
                 left: 0,
                 bottom: 0,
                 width: 280,
-                zIndex: 160,
                 display: "flex",
               }}
             >
               {sidebarContent}
             </div>
-          </>
+          </div>
         )}
       </div>
     </>
