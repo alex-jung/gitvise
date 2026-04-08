@@ -1,5 +1,5 @@
-import { Topbar } from "@/components/topbar";
-import { HealthBar, HealthBadge } from "@/components/health-badge";
+import { Topbar } from "@/components/Topbar";
+import { HealthBar, HealthBadge } from "@/components/HealthBadge";
 import Link from "next/link";
 
 // Placeholder data – wird in Phase 2 durch echte Plugin-Daten ersetzt
