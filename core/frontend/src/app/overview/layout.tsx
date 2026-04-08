@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar } from "@/components/Sidebar";
 
 export default function OverviewLayout({ children }: { children: React.ReactNode }) {
   return (
