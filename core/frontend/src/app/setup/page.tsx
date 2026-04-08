@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -346,6 +346,13 @@ function Step3({
 export default function SetupPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+
+  // Redirect to /overview if setup is already completed
+  useEffect(() => {
+    apiGet<{ completed: boolean }>("/api/core/setup/status")
+      .then(({ completed }) => { if (completed) router.replace("/overview"); })
+      .catch(() => {}); // backend unreachable – stay on setup page
+  }, [router]);
   const [detectedLogin, setDetectedLogin] = useState("");
   const [saving, setSaving] = useState(false);
   const [form, setFormRaw] = useState<FormState>({
