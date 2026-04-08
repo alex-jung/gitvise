@@ -1,15 +1,19 @@
 #!/bin/sh
 set -e
 
-# Start API in background
-node /app/api/dist/index.js &
-API_PID=$!
+echo "[gitvise] Starting backend..."
+cd /app/backend
+uvicorn main:app --host 0.0.0.0 --port "${PORT_API:-3001}" &
+BACKEND_PID=$!
 
-# Start Web
-node /app/web/server.js &
-WEB_PID=$!
+echo "[gitvise] Starting frontend..."
+HOSTNAME=0.0.0.0 \
+  PORT="${PORT_WEB:-3000}" \
+  NEXT_PUBLIC_API_URL="http://localhost:${PORT_API:-3001}" \
+  node /app/frontend/server.js &
+FRONTEND_PID=$!
 
-# Shutdown both on exit
-trap "kill $API_PID $WEB_PID 2>/dev/null; exit" TERM INT
+# Shutdown both on SIGTERM / SIGINT
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" TERM INT
 
-wait $API_PID $WEB_PID
+wait $BACKEND_PID $FRONTEND_PID

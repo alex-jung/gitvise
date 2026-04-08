@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* ── Design Tokens ──────────────────────────────────────────────────────────
+   Plugins must only use these CSS variables – never hardcode colours,
+   fonts or spacing. Dark mode is applied automatically via [data-theme].
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  /* Surfaces */
+  --color-background:     #0d1117;
+  --color-surface:        #161b22;
+  --color-surface-raised: #1c2128;
+  --color-border:         #30363d;
+  --color-border-subtle:  #21262d;
+
+  /* Text */
+  --color-text-primary:   #e6edf3;
+  --color-text-secondary: #8d96a0;
+  --color-text-muted:     #6e7681;
+  --color-text-inverse:   #0d1117;
+
+  /* Semantic */
+  --color-primary:   #388bfd;
+  --color-success:   #3fb950;
+  --color-warning:   #d29922;
+  --color-danger:    #f85149;
+  --color-info:      #58a6ff;
+  --color-muted:     #484f58;
+
+  /* Severity */
+  --color-critical: #ff7b72;
+  --color-high:     #f85149;
+  --color-medium:   #d29922;
+  --color-low:      #8b949e;
+
+  /* Sidebar */
+  --color-sidebar-bg:          #010409;
+  --color-sidebar-item-active: #21262d;
+  --color-sidebar-item-hover:  #161b22;
+  --color-sidebar-text:        #8d96a0;
+
+  /* Sidebar dimensions */
+  --sidebar-width-expanded:  220px;
+  --sidebar-width-collapsed: 48px;
+  --sidebar-transition:      width 200ms ease;
+
+  /* Spacing scale */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-size-xs:   11px;
+  --font-size-sm:   12px;
+  --font-size-md:   14px;
+  --font-size-lg:   16px;
+  --font-size-xl:   20px;
+  --font-size-2xl:  24px;
+  --font-size-3xl:  32px;
+
+  /* Radii */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.24);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.32);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.40);
+}
+
+[data-theme="light"] {
+  --color-background:     #ffffff;
+  --color-surface:        #f6f8fa;
+  --color-surface-raised: #ffffff;
+  --color-border:         #d0d7de;
+  --color-border-subtle:  #eaeef2;
+  --color-text-primary:   #1f2328;
+  --color-text-secondary: #656d76;
+  --color-text-muted:     #9198a1;
+  --color-text-inverse:   #ffffff;
+  --color-primary:        #0969da;
+  --color-success:        #1a7f37;
+  --color-warning:        #9a6700;
+  --color-danger:         #cf222e;
+  --color-info:           #0550ae;
+  --color-muted:          #6e7781;
+  --color-critical:       #82071e;
+  --color-high:           #cf222e;
+  --color-medium:         #9a6700;
+  --color-low:            #6e7781;
+  --color-sidebar-bg:          #f6f8fa;
+  --color-sidebar-item-active: #eaeef2;
+  --color-sidebar-item-hover:  #f0f3f6;
+  --color-sidebar-text:        #656d76;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.16);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+  margin: 0;
+}

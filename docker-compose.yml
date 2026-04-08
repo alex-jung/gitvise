@@ -1,24 +1,28 @@
 services:
-  api:
-    image: node:22-alpine
-    user: "${UID:-1000}:${GID:-1000}"
+  backend:
+    image: python:3.12-slim
     working_dir: /app
     volumes:
-      - ./apps/api:/app
+      - ./core/backend:/app
+      - gitvise-data:/data
     ports:
       - "3001:3001"
     environment:
-      - NODE_ENV=development
       - PORT=3001
-    command: sh -c "npm install && npm run dev"
+      - DATA_DIR=/data
+      - FRONTEND_ORIGIN=http://localhost:3000
+      - PLUGINS_BUILTIN_DIR=/app/plugins/builtin
+      - PLUGINS_EXTERNAL_DIR=/app/plugins/external
+    command: >
+      sh -c "pip install -r requirements.txt -q && uvicorn main:app --host 0.0.0.0 --port 3001 --reload"
     restart: unless-stopped
 
-  web:
+  frontend:
     image: node:22-alpine
-    user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     volumes:
-      - ./apps/web:/app
+      - ./core/frontend:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
     environment:
@@ -26,20 +30,8 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:3001
     command: sh -c "npm install && npm run dev"
     depends_on:
-      - api
+      - backend
     restart: unless-stopped
 
-  landing:
-    image: node:22-alpine
-    user: "${UID:-1000}:${GID:-1000}"
-    working_dir: /app
-    volumes:
-      - ./apps/landing:/app
-    ports:
-      - "3002:3002"
-    environment:
-      - NODE_ENV=development
-    command: sh -c "npm install && npm run dev -- --port 3002"
-    profiles:
-      - landing
-    restart: unless-stopped
+volumes:
+  gitvise-data:

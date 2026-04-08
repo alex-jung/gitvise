@@ -11,6 +11,14 @@ out/
 dist/
 build/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+core/backend/.venv/
+
 # Env
 .env
 .env.local
