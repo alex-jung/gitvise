@@ -20,6 +20,7 @@ class PluginManifest:
     dashboard_widgets: list[dict] = field(default_factory=list)
     backend_routes: list[dict] = field(default_factory=list)
     sync_hooks: list[str] = field(default_factory=list)
+    sync_module: str = ""
     requires_license: bool = False
 
     def to_dict(self) -> dict:
@@ -81,6 +82,7 @@ class PluginRegistry:
             dashboard_widgets=ui.get("dashboardWidgets", []),
             backend_routes=backend.get("routes", []),
             sync_hooks=backend.get("syncHooks", []),
+            sync_module=backend.get("syncModule", ""),
             requires_license=data.get("license", {}).get("required", False),
         )
         self._plugins[plugin.id] = plugin

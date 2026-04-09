@@ -9,6 +9,7 @@ from core.sync_engine import SyncEngine
 from api.setup import router as setup_router
 from api.plugins import router as plugins_router
 from api.sync import router as sync_router
+from api.repos import router as repos_router
 
 
 @asynccontextmanager
@@ -23,6 +24,17 @@ async def lifespan(app: FastAPI):
     engine = SyncEngine(registry)
     await engine.start()
     app.state.sync_engine = engine
+
+    # Trigger an immediate sync on startup if setup is already completed
+    import asyncio
+    from core.db import SessionLocal
+    from api.setup import _get_config as _cfg
+    _db = SessionLocal()
+    try:
+        if _cfg(_db, "setup_completed") == "true":
+            asyncio.create_task(engine.trigger())
+    finally:
+        _db.close()
 
     print(f"[gitvise] Core API ready on port {settings.port}")
     yield
@@ -49,6 +61,7 @@ app.add_middleware(
 app.include_router(setup_router, prefix="/api/core")
 app.include_router(plugins_router, prefix="/api/core")
 app.include_router(sync_router, prefix="/api/core")
+app.include_router(repos_router, prefix="/api/core")
 
 
 @app.get("/health")

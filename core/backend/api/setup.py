@@ -86,7 +86,9 @@ async def test_github_connection(body: TestConnectionRequest):
 @router.post("/setup")
 async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
     """Persist setup configuration and mark setup as completed."""
-    _set_config(db, "github_token", body.github_token, encrypted=True)
+    # Only update token if a non-empty value is provided (allows settings-page partial save)
+    if body.github_token:
+        _set_config(db, "github_token", body.github_token, encrypted=True)
     _set_config(db, "github_auth_type", body.github_auth_type)
     _set_config(db, "github_org", body.github_org)
     _set_config(db, "sync_interval_sec", str(body.sync_interval_sec))
@@ -97,11 +99,13 @@ async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
     _set_config(db, "setup_completed", "true")
     db.commit()
 
-    # Update sync engine interval
+    # Update sync engine interval and trigger immediate sync
+    import asyncio
     from main import app  # late import to avoid circular
     engine = getattr(app.state, "sync_engine", None)
     if engine:
         engine.set_interval(body.sync_interval_sec)
+        asyncio.create_task(engine.trigger())
 
     return {"success": True}
 

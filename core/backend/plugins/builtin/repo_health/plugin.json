@@ -1,0 +1,30 @@
+{
+  "id": "repo-health",
+  "name": "Repository Health",
+  "version": "1.0.0",
+  "tier": "community",
+  "description": "Tracks health scores for all repositories: README, license, branch protection, staleness.",
+  "ui": {
+    "navItem": {
+      "label": "Repositories",
+      "icon": "◫",
+      "path": "/repos",
+      "order": 1
+    },
+    "dashboardWidgets": [
+      {
+        "id": "repo-health-score",
+        "type": "stat-card",
+        "title": "Org Health Score",
+        "slot": "top"
+      }
+    ]
+  },
+  "backend": {
+    "syncHooks": ["onSchedule"],
+    "syncModule": "plugins.builtin.repo_health.sync"
+  },
+  "license": {
+    "required": false
+  }
+}

@@ -1,153 +1,270 @@
-import { Topbar } from "@/components/Topbar";
-import { HealthBar, HealthBadge } from "@/components/HealthBadge";
-import Link from "next/link";
+"use client";
 
-// Placeholder data – wird in Phase 2 durch echte Plugin-Daten ersetzt
-const MOCK_REPOS = [
-  { name: "api-service", fullName: "acme/api-service", language: "TypeScript", healthScore: 28, pushedAt: "2026-02-24", openIssuesCount: 12 },
-  { name: "frontend", fullName: "acme/frontend", language: "TypeScript", healthScore: 45, pushedAt: "2026-03-23", openIssuesCount: 3 },
-  { name: "data-pipeline", fullName: "acme/data-pipeline", language: "Python", healthScore: 60, pushedAt: "2026-04-05", openIssuesCount: 7 },
-  { name: "auth-service", fullName: "acme/auth-service", language: "Go", healthScore: 70, pushedAt: "2026-04-06", openIssuesCount: 1 },
-  { name: "docs", fullName: "acme/docs", language: "Markdown", healthScore: 85, pushedAt: "2026-04-02", openIssuesCount: 0 },
-  { name: "infra", fullName: "acme/infra", language: "HCL", healthScore: 92, pushedAt: "2026-04-07", openIssuesCount: 0 },
-];
+import { useEffect, useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
+import { Topbar } from "@/components/topbar";
+import { HealthBar } from "@/components/health-badge";
+import { RelativeTime } from "@/components/ui/relative-time";
 
-const avgScore = Math.round(MOCK_REPOS.reduce((s, r) => s + r.healthScore, 0) / MOCK_REPOS.length);
-const critical = MOCK_REPOS.filter((r) => r.healthScore < 40).length;
-const stale = MOCK_REPOS.filter((r) => {
-  const days = (Date.now() - new Date(r.pushedAt).getTime()) / 86400000;
-  return days > 30;
-}).length;
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-function daysSince(date: string) {
-  const d = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
-  return d === 0 ? "heute" : d === 1 ? "gestern" : `vor ${d}d`;
+interface RepoSummary {
+  total: number;
+  avgHealthScore: number;
+  critical: number;
+  stale: number;
+  unprotected: number;
+  lastSyncedAt: string | null;
+  attentionRepos: AttentionRepo[];
 }
 
+interface AttentionRepo {
+  fullName: string;
+  name: string;
+  healthScore: number;
+  hasReadme: boolean;
+  hasLicense: boolean;
+  hasBranchProtection: boolean;
+  daysSincePush: number | null;
+  pushedAt: string | null;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function OverviewPage() {
-  const attention = MOCK_REPOS.filter((r) => r.healthScore < 70).slice(0, 4);
+  const [summary, setSummary] = useState<RepoSummary | null>(null);
+  const [org, setOrg] = useState<string>("");
+  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      apiGet<RepoSummary>("/api/core/repos/summary").catch(() => null),
+      apiGet<{ githubOrg?: string }>("/api/core/setup/config").catch(() => null),
+    ]).then(([s, cfg]) => {
+      setSummary(s);
+      setOrg(cfg?.githubOrg ?? "");
+      setLoading(false);
+    });
+  }, []);
+
+  const triggerSync = async () => {
+    setSyncing(true);
+    try {
+      await apiPost("/api/core/sync/trigger", {});
+      await new Promise((r) => setTimeout(r, 3000));
+      const s = await apiGet<RepoSummary>("/api/core/repos/summary");
+      setSummary(s);
+    } catch {
+      // silent
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const noData = !loading && summary?.total === 0;
 
   return (
     <>
-      <Topbar org="acme-corp" />
-      <main className="flex-1 p-6 overflow-auto">
+      <Topbar org={org} />
+      <main style={{ flex: 1, padding: "var(--space-6)", overflowY: "auto" }}>
+
         {/* Org Health Score */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-sm" style={{ color: "var(--color-text-secondary)" }}>Org Health Score</span>
-            <span className="font-bold text-lg">{avgScore}/100</span>
+        <div style={{ marginBottom: "var(--space-6)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+            <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+              Org Health Score
+            </span>
+            {loading ? (
+              <span style={{ fontWeight: 700, fontSize: "var(--font-size-lg)", color: "var(--color-text-muted)" }}>—</span>
+            ) : (
+              <span style={{ fontWeight: 700, fontSize: "var(--font-size-lg)", color: "var(--color-text-primary)" }}>
+                {summary?.avgHealthScore ?? 0}/100
+              </span>
+            )}
+            {summary?.lastSyncedAt && (
+              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                · last sync: <RelativeTime value={summary.lastSyncedAt} />
+              </span>
+            )}
           </div>
-          <div className="w-64">
-            <HealthBar score={avgScore} />
+          <div style={{ width: 280 }}>
+            <HealthBar score={summary?.avgHealthScore ?? 0} />
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8 max-w-xl">
-          {[
-            { value: MOCK_REPOS.length, label: "Repositories", color: "var(--color-text-primary)" },
-            { value: critical, label: "Critical (Score < 40)", color: "var(--color-danger)" },
-            { value: stale, label: "Stale (> 30 Tage)", color: "var(--color-warning)" },
-          ].map(({ value, label, color }) => (
+        {/* Stat Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-8)", maxWidth: 700 }}>
+          <StatCard
+            value={loading ? "…" : String(summary?.total ?? 0)}
+            label="Repositories"
+            color="var(--color-text-primary)"
+          />
+          <StatCard
+            value={loading ? "…" : String(summary?.critical ?? 0)}
+            label="Critical (Score < 40)"
+            color="var(--color-danger)"
+          />
+          <StatCard
+            value={loading ? "…" : String(summary?.stale ?? 0)}
+            label="Stale (> 30 days)"
+            color="var(--color-warning)"
+          />
+          <StatCard
+            value={loading ? "…" : String(summary?.unprotected ?? 0)}
+            label="Unprotected"
+            color="var(--color-warning)"
+          />
+        </div>
+
+        {/* No data state */}
+        {noData && (
+          <div
+            style={{
+              padding: "var(--space-6)",
+              borderRadius: "var(--radius-xl)",
+              border: "1px solid var(--color-border)",
+              background: "var(--color-surface)",
+              textAlign: "center",
+              marginBottom: "var(--space-6)",
+            }}
+          >
+            <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+              No repositories synced yet.
+            </p>
+            <button
+              onClick={triggerSync}
+              disabled={syncing}
+              style={{
+                padding: "var(--space-2) var(--space-5)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--color-primary)",
+                color: "var(--color-text-inverse)",
+                border: "none",
+                fontSize: "var(--font-size-sm)",
+                fontWeight: 500,
+                cursor: syncing ? "not-allowed" : "pointer",
+                opacity: syncing ? 0.6 : 1,
+              }}
+            >
+              {syncing ? "Syncing..." : "Start first sync"}
+            </button>
+          </div>
+        )}
+
+        {/* Attention Required */}
+        {!noData && summary && summary.attentionRepos.length > 0 && (
+          <div style={{ marginBottom: "var(--space-8)" }}>
+            <h2
+              style={{
+                fontSize: "var(--font-size-sm)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-3)",
+              }}
+            >
+              Attention Required
+            </h2>
             <div
-              key={label}
               style={{
                 background: "var(--color-surface)",
                 border: "1px solid var(--color-border)",
                 borderRadius: "var(--radius-xl)",
-                padding: "var(--space-4)",
+                overflow: "hidden",
               }}
             >
-              <div className="text-2xl font-bold" style={{ color }}>{value}</div>
-              <div className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Attention Required */}
-        <div className="mb-8">
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider mb-3"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Attention Required
-          </h2>
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-xl)",
-            }}
-          >
-            {attention.map((repo) => (
-              <Link
-                key={repo.fullName}
-                href={`/repos/${repo.fullName}`}
-                className="flex items-center gap-4 px-4 py-3 transition-colors"
-                style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
-              >
-                <span className="text-sm font-medium w-48 truncate">{repo.name}</span>
-                <div className="flex-1">
-                  <HealthBar score={repo.healthScore} />
+              {summary.attentionRepos.map((repo, i) => (
+                <div
+                  key={repo.fullName}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-4)",
+                    padding: "var(--space-3) var(--space-4)",
+                    borderTop: i > 0 ? "1px solid var(--color-border-subtle)" : undefined,
+                  }}
+                >
+                  <span style={{ fontWeight: 500, width: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--color-text-primary)" }}>
+                    {repo.name}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <HealthBar score={repo.healthScore} />
+                  </div>
+                  <div style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)" }}>
+                    {!repo.hasReadme && <Tag label="No README" />}
+                    {!repo.hasLicense && <Tag label="No License" />}
+                    {!repo.hasBranchProtection && <Tag label="Unprotected" />}
+                    {(repo.daysSincePush ?? 0) > 30 && <Tag label="Stale" />}
+                  </div>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+                    <RelativeTime value={repo.pushedAt} />
+                  </span>
                 </div>
-                <span className="text-xs w-16 text-right" style={{ color: "var(--color-text-muted)" }}>
-                  {daysSince(repo.pushedAt)}
-                </span>
-              </Link>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* All Repos Table */}
-        <div>
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider mb-3"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Alle Repositories
-          </h2>
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-xl)",
-              overflow: "hidden",
-            }}
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Sprache</th>
-                  <th className="text-left px-4 py-3 w-40">Health</th>
-                  <th className="text-left px-4 py-3">Letzte Aktivität</th>
-                  <th className="text-right px-4 py-3">Issues</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_REPOS.map((repo) => (
-                  <tr
-                    key={repo.fullName}
-                    style={{ borderTop: "1px solid var(--color-border-subtle)" }}
-                  >
-                    <td className="px-4 py-3">
-                      <Link href={`/repos/${repo.fullName}`} style={{ color: "var(--color-primary)" }}>
-                        {repo.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "var(--color-text-muted)" }}>{repo.language ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <HealthBadge score={repo.healthScore} />
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "var(--color-text-muted)" }}>{daysSince(repo.pushedAt)}</td>
-                    <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-muted)" }}>{repo.openIssuesCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Quick actions */}
+        {!loading && summary && summary.total > 0 && (
+          <div style={{ display: "flex", gap: "var(--space-3)" }}>
+            <button
+              onClick={triggerSync}
+              disabled={syncing}
+              style={{
+                padding: "var(--space-2) var(--space-4)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border)",
+                background: "transparent",
+                color: "var(--color-text-muted)",
+                fontSize: "var(--font-size-sm)",
+                cursor: syncing ? "not-allowed" : "pointer",
+                opacity: syncing ? 0.6 : 1,
+              }}
+            >
+              {syncing ? "Syncing..." : "↻ Sync now"}
+            </button>
           </div>
-        </div>
+        )}
       </main>
     </>
+  );
+}
+
+function StatCard({ value, label, color }: { value: string; label: string; color: string }) {
+  return (
+    <div
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-xl)",
+        padding: "var(--space-4)",
+      }}
+    >
+      <div style={{ fontSize: "var(--font-size-2xl, 1.75rem)", fontWeight: 700, color, marginBottom: "var(--space-1)" }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>{label}</div>
+    </div>
+  );
+}
+
+function Tag({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        padding: "1px 5px",
+        borderRadius: "var(--radius-full)",
+        background: "rgba(239,68,68,0.15)",
+        color: "var(--color-danger)",
+        fontSize: "var(--font-size-xs)",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </span>
   );
 }

@@ -1,6 +1,6 @@
 import { Sidebar } from "@/components/sidebar";
 
-export default function OverviewLayout({ children }: { children: React.ReactNode }) {
+export default function ReposLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
