@@ -47,10 +47,10 @@ COPY --from=build-backend /install /usr/local
 # Backend source
 COPY core/backend ./backend
 
-# Plugin directories (builtin plugins will be here in Phase 2+)
-RUN mkdir -p /app/plugins/builtin /app/plugins/external
+# External plugin directory (user-supplied plugins mounted at runtime)
+RUN mkdir -p /app/plugins/external
 
-ENV PLUGINS_BUILTIN_DIR=/app/plugins/builtin
+ENV PLUGINS_BUILTIN_DIR=/app/backend/plugins/builtin
 ENV PLUGINS_EXTERNAL_DIR=/app/plugins/external
 
 # Frontend (Next.js standalone)

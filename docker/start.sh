@@ -1,13 +1,25 @@
 #!/bin/sh
 set -e
 
-echo "[gitvise] Starting backend..."
-cd /app/backend
-uvicorn main:app --host 0.0.0.0 --port "${PORT_API:-3001}" &
+# Prefix each line of a process's output with a tag
+prefix() {
+  local tag="$1"
+  shift
+  "$@" 2>&1 | while IFS= read -r line; do
+    echo "${tag} ${line}"
+  done
+}
+
+echo "[gitvise] Starting backend on port ${PORT_API:-3001}..."
+prefix "[api]" uvicorn main:app \
+  --host 0.0.0.0 \
+  --port "${PORT_API:-3001}" \
+  --app-dir /app/backend &
 BACKEND_PID=$!
 
-echo "[gitvise] Starting frontend..."
-HOSTNAME=0.0.0.0 \
+echo "[gitvise] Starting frontend on port ${PORT_WEB:-3000}..."
+prefix "[web]" env \
+  HOSTNAME=0.0.0.0 \
   PORT="${PORT_WEB:-3000}" \
   NEXT_PUBLIC_API_URL="http://localhost:${PORT_API:-3001}" \
   node /app/frontend/server.js &

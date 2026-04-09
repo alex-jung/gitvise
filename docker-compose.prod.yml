@@ -1,0 +1,12 @@
+services:
+  gitvise:
+    image: ghcr.io/alex-jung/gitvise:latest
+    ports:
+      - "3000:3000"   # frontend
+      - "3001:3001"   # backend API (for direct debugging)
+    volumes:
+      - gitvise-data:/data
+    restart: unless-stopped
+
+volumes:
+  gitvise-data:
