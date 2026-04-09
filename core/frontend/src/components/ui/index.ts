@@ -1,10 +1,10 @@
-export { Badge } from "./Badge";
-export type { BadgeVariant, BadgeSize } from "./Badge";
+export { Badge } from "./badge";
+export type { BadgeVariant, BadgeSize } from "./badge";
 
-export { ProgressBar } from "./ProgressBar";
-export type { ProgressBarColor, ProgressBarSize } from "./ProgressBar";
+export { ProgressBar } from "./progress-bar";
+export type { ProgressBarColor, ProgressBarSize } from "./progress-bar";
 
-export { StatCard } from "./StatCard";
-export type { StatCardStatus } from "./StatCard";
+export { StatCard } from "./stat-card";
+export type { StatCardStatus } from "./stat-card";
 
-export { DashboardCard } from "./DashboardCard";
+export { DashboardCard } from "./dashboard-card";
