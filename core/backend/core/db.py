@@ -31,10 +31,18 @@ def init_db() -> Engine:
         cursor.close()
 
     from models.settings import AppConfig  # noqa: F401 – registers the model
+    from models.repo import Repository  # noqa: F401 – registers the model
 
     Base.metadata.create_all(_engine)
     _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
+
+
+def SessionLocal() -> Session:
+    """Return a new DB session (for use outside of FastAPI dependency injection)."""
+    if _SessionLocal is None:
+        raise RuntimeError("Database not initialised – call init_db() first")
+    return _SessionLocal()
 
 
 def get_db():

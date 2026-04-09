@@ -51,11 +51,28 @@ class SyncEngine:
         try:
             plugins_with_hook = self._registry.plugins_with_hook("onSchedule")
             for plugin in plugins_with_hook:
-                # Phase 2: call plugin-specific sync logic here
-                print(f"[sync-engine] Syncing plugin: {plugin.id}")
+                await self._call_plugin_sync(plugin)
             self._last_sync = datetime.now(UTC)
             self._status = "idle"
         except Exception as exc:
             self._status = "error"
             self._error = str(exc)
             print(f"[sync-engine] Sync failed: {exc}")
+
+    async def _call_plugin_sync(self, plugin) -> None:
+        import importlib
+        # Use syncModule from manifest if present, else derive from id
+        sync_module = (
+            plugin.sync_module
+            if hasattr(plugin, "sync_module") and plugin.sync_module
+            else f"plugins.builtin.{plugin.id.replace('-', '_')}.sync"
+        )
+        print(f"[sync-engine] Syncing plugin: {plugin.id} via {sync_module}")
+        try:
+            mod = importlib.import_module(sync_module)
+            await mod.run()
+        except ModuleNotFoundError:
+            print(f"[sync-engine] No sync module found for plugin: {plugin.id}")
+        except Exception as exc:
+            print(f"[sync-engine] Plugin {plugin.id} sync failed: {exc}")
+            raise

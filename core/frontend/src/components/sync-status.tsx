@@ -11,9 +11,9 @@ interface SyncStatusData {
 
 function formatRelative(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return "gerade eben";
-  if (diff < 3600) return `vor ${Math.floor(diff / 60)} Min.`;
-  return `vor ${Math.floor(diff / 3600)} Std.`;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
 }
 
 export function SyncStatus() {
@@ -60,13 +60,13 @@ export function SyncStatus() {
       : data.status === "syncing"
       ? "Syncing..."
       : data.status === "error"
-      ? "Sync fehlgeschlagen"
+      ? "Sync failed"
       : data.lastSync
-      ? `Sync ${formatRelative(data.lastSync)}`
-      : "Noch kein Sync";
+      ? `Synced ${formatRelative(data.lastSync)}`
+      : "Never synced";
 
   return (
-    <div ref={ref} style={{ position: "fixed", bottom: "var(--space-4)", right: "var(--space-4)", zIndex: 100 }}>
+    <div ref={ref} style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
@@ -114,8 +114,8 @@ export function SyncStatus() {
             Sync Status
           </div>
           <div>Status: {data.status}</div>
-          {data.lastSync && <div>Letzter Sync: {new Date(data.lastSync).toLocaleString("de")}</div>}
-          {data.error && <div style={{ color: "var(--color-danger)" }}>Fehler: {data.error}</div>}
+          {data.lastSync && <div>Last sync: {new Date(data.lastSync).toLocaleString("en")}</div>}
+          {data.error && <div style={{ color: "var(--color-danger)" }}>Error: {data.error}</div>}
         </div>
       )}
 

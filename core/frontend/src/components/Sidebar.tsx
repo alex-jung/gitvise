@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { SyncStatus } from "@/components/sync-status";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -165,8 +166,13 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Settings + Toggle */}
+      {/* Footer: Sync status + Settings + Toggle */}
       <div style={{ borderTop: "1px solid var(--color-border)", padding: "var(--space-2)" }}>
+        {!collapsed && (
+          <div style={{ padding: "var(--space-1) var(--space-3)", marginBottom: "var(--space-1)" }}>
+            <SyncStatus />
+          </div>
+        )}
         <Link
           href="/settings"
           onClick={close}
@@ -205,7 +211,7 @@ export function Sidebar() {
           }}
         >
           <span style={{ fontSize: 14 }}>{collapsed ? "›" : "‹"}</span>
-          {!collapsed && <span>Einklappen</span>}
+          {!collapsed && <span>Collapse</span>}
         </button>
       </div>
     </aside>
