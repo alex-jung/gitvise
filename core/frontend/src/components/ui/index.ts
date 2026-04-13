@@ -27,5 +27,9 @@ export { EmptyState } from "./empty-state";
 export { LoadingState } from "./loading-state";
 export { ErrorBoundary } from "./error-boundary";
 
+// Pro
+export { ProLock } from "./pro-lock";
+export { WidgetDemoBar } from "./widget-demo-bar";
+
 // Util
 export { RelativeTime } from "./relative-time";

@@ -17,7 +17,7 @@ class PluginManifest:
     tier: str  # community | pro
     description: str
     nav_item: dict[str, Any] = field(default_factory=dict)
-    dashboard_widgets: list[dict] = field(default_factory=list)
+    widgets: list[dict] = field(default_factory=list)        # new: full widget defs with config schema
     backend_routes: list[dict] = field(default_factory=list)
     sync_hooks: list[str] = field(default_factory=list)
     sync_module: str = ""
@@ -30,9 +30,9 @@ class PluginManifest:
             "version": self.version,
             "tier": self.tier,
             "description": self.description,
+            "widgets": self.widgets,
             "ui": {
                 "navItem": self.nav_item,
-                "dashboardWidgets": self.dashboard_widgets,
             },
             "backend": {
                 "routes": self.backend_routes,
@@ -79,7 +79,7 @@ class PluginRegistry:
             tier=data.get("tier", "community"),
             description=data.get("description", ""),
             nav_item=ui.get("navItem", {}),
-            dashboard_widgets=ui.get("dashboardWidgets", []),
+            widgets=data.get("widgets", []),
             backend_routes=backend.get("routes", []),
             sync_hooks=backend.get("syncHooks", []),
             sync_module=backend.get("syncModule", ""),

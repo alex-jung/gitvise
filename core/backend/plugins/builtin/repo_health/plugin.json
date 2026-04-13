@@ -4,21 +4,59 @@
   "version": "1.0.0",
   "tier": "community",
   "description": "Tracks health scores for all repositories: README, license, branch protection, staleness.",
+  "widgets": [
+    {
+      "id": "repo-health-score",
+      "type": "stat-card",
+      "title": "Org Health Score",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "threshold_warn": {
+          "type": "number",
+          "label": "Warning threshold (%)",
+          "default": 60,
+          "min": 0,
+          "max": 100
+        },
+        "threshold_critical": {
+          "type": "number",
+          "label": "Critical threshold (%)",
+          "default": 40,
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": "repo-health-table",
+      "type": "table",
+      "title": "Repository Health Details",
+      "defaultSize": "2/3",
+      "tier": "community",
+      "config": {
+        "page_size": {
+          "type": "number",
+          "label": "Rows per page",
+          "default": 25,
+          "min": 10,
+          "max": 100
+        },
+        "show_archived": {
+          "type": "boolean",
+          "label": "Show archived repositories",
+          "default": false
+        }
+      }
+    }
+  ],
   "ui": {
     "navItem": {
       "label": "Repositories",
       "icon": "◫",
       "path": "/repos",
       "order": 1
-    },
-    "dashboardWidgets": [
-      {
-        "id": "repo-health-score",
-        "type": "stat-card",
-        "title": "Org Health Score",
-        "slot": "top"
-      }
-    ]
+    }
   },
   "backend": {
     "syncHooks": ["onSchedule"],

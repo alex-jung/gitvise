@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
-import { Topbar } from "@/components/topbar";
 import { HealthBar } from "@/components/health-badge";
 import { RelativeTime } from "@/components/ui/relative-time";
 
@@ -33,19 +32,16 @@ interface AttentionRepo {
 
 export default function OverviewPage() {
   const [summary, setSummary] = useState<RepoSummary | null>(null);
-  const [org, setOrg] = useState<string>("");
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      apiGet<RepoSummary>("/api/core/repos/summary").catch(() => null),
-      apiGet<{ githubOrg?: string }>("/api/core/setup/config").catch(() => null),
-    ]).then(([s, cfg]) => {
-      setSummary(s);
-      setOrg(cfg?.githubOrg ?? "");
-      setLoading(false);
-    });
+    apiGet<RepoSummary>("/api/core/repos/summary")
+      .catch(() => null)
+      .then((s) => {
+        setSummary(s);
+        setLoading(false);
+      });
   }, []);
 
   const triggerSync = async () => {
@@ -66,7 +62,6 @@ export default function OverviewPage() {
 
   return (
     <>
-      <Topbar org={org} />
       <main style={{ flex: 1, padding: "var(--space-6)", overflowY: "auto" }}>
 
         {/* Org Health Score */}

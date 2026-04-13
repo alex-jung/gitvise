@@ -1,4 +1,5 @@
 import React from "react";
+import { WidgetDemoBar } from "./widget-demo-bar";
 
 interface DashboardCardProps {
   title: string;
@@ -9,6 +10,8 @@ interface DashboardCardProps {
   error?: string;
   /** Set to false for edge-to-edge content (e.g. full-width charts) */
   padding?: boolean;
+  /** Shows a demo-mode banner below the header */
+  demoMode?: boolean;
   children?: React.ReactNode;
 }
 
@@ -20,6 +23,7 @@ export function DashboardCard({
   loading = false,
   error,
   padding = true,
+  demoMode = false,
   children,
 }: DashboardCardProps) {
   return (
@@ -69,6 +73,9 @@ export function DashboardCard({
         </div>
         {action && <div style={{ flexShrink: 0 }}>{action}</div>}
       </div>
+
+      {/* Demo banner */}
+      {demoMode && <WidgetDemoBar />}
 
       {/* Body */}
       <div style={{ flex: 1, padding: padding ? "var(--space-4)" : 0 }}>

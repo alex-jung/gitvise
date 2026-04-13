@@ -2,10 +2,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.auth import auth_middleware
 from core.config import settings
 from core.db import init_db
 from core.plugin_registry import PluginRegistry
 from core.sync_engine import SyncEngine
+from api.auth import router as auth_router
+from api.dashboard import router as dashboard_router
 from api.setup import router as setup_router
 from api.plugins import router as plugins_router
 from api.sync import router as sync_router
@@ -57,7 +60,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(auth_middleware)
+
 # ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api/core")
+app.include_router(dashboard_router, prefix="/api/core")
 app.include_router(setup_router, prefix="/api/core")
 app.include_router(plugins_router, prefix="/api/core")
 app.include_router(sync_router, prefix="/api/core")

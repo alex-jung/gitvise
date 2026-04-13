@@ -14,10 +14,34 @@ export default function Home() {
       try {
         const res = await fetch(`${apiUrl}/api/core/setup/status`, {
           cache: "no-store",
+          credentials: "include",
         });
         if (!res.ok) throw new Error("not ok");
-        const { completed }: { completed: boolean } = await res.json();
-        if (!cancelled) router.replace(completed ? "/overview" : "/setup");
+        const data: { completed: boolean; hasPassword: boolean } = await res.json();
+        if (cancelled) return;
+        if (!data.hasPassword) {
+          router.replace("/setup");
+        } else if (!data.completed) {
+          router.replace("/setup");
+        } else {
+          // Setup done – check if we have a valid session
+          const authRes = await fetch(`${apiUrl}/api/core/auth/status`, {
+            cache: "no-store",
+            credentials: "include",
+          });
+          if (cancelled) return;
+          // Try a protected endpoint to see if we're authenticated
+          const sessionRes = await fetch(`${apiUrl}/api/core/setup/config`, {
+            cache: "no-store",
+            credentials: "include",
+          });
+          if (cancelled) return;
+          if (sessionRes.status === 401) {
+            router.replace("/login");
+          } else {
+            router.replace("/overview");
+          }
+        }
       } catch {
         // Backend not ready yet – retry after 1s
         if (!cancelled) setTimeout(check, 1000);

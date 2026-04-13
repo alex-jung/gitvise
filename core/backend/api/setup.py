@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 import httpx
 
+from core.auth import SESSION_COOKIE, SESSION_DURATION_DAYS, create_session
 from core.db import get_db
 from core.crypto import encrypt, decrypt
 from models.settings import AppConfig
@@ -48,9 +49,10 @@ def _set_config(db: Session, key: str, value: str, encrypted: bool = False) -> N
 
 @router.get("/setup/status")
 async def get_setup_status(db: Session = Depends(get_db)):
-    """Returns whether the initial setup has been completed."""
+    """Returns whether the initial setup has been completed and if a password is set."""
     completed = _get_config(db, "setup_completed") == "true"
-    return {"completed": completed}
+    has_password = bool(_get_config(db, "admin_password_hash"))
+    return {"completed": completed, "hasPassword": has_password}
 
 
 @router.post("/setup/test-connection")
@@ -84,7 +86,7 @@ async def test_github_connection(body: TestConnectionRequest):
 
 
 @router.post("/setup")
-async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
+async def complete_setup(body: SetupRequest, response: Response, db: Session = Depends(get_db)):
     """Persist setup configuration and mark setup as completed."""
     # Only update token if a non-empty value is provided (allows settings-page partial save)
     if body.github_token:
@@ -98,6 +100,17 @@ async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
 
     _set_config(db, "setup_completed", "true")
     db.commit()
+
+    # Create auth session so the user lands on /overview without needing to log in
+    token = create_session(db)
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        httponly=True,
+        samesite="strict",
+        max_age=SESSION_DURATION_DAYS * 86400,
+        secure=False,  # set True behind HTTPS
+    )
 
     # Update sync engine interval and trigger immediate sync
     import asyncio

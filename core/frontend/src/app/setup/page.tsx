@@ -12,6 +12,7 @@ interface TestConnectionResult {
 }
 
 interface FormState {
+  password: string;
   token: string;
   githubOrg: string;
   syncIntervalSec: number;
@@ -104,6 +105,83 @@ function Btn({ children, variant = "primary", disabled, loading, onClick, type =
   );
 }
 
+function Step0({ form, setForm, onNext }: {
+  form: FormState;
+  setForm: (f: Partial<FormState>) => void;
+  onNext: () => void;
+}) {
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const valid = form.password.length >= 8 && form.password === confirm;
+
+  const submit = async () => {
+    if (!valid) return;
+    setSaving(true);
+    setError("");
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+      const res = await fetch(`${apiUrl}/api/core/auth/set-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: form.password }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.detail ?? "Failed to set password.");
+        return;
+      }
+      onNext();
+    } catch {
+      setError("Could not reach backend.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 600, marginBottom: "var(--space-2)" }}>
+        Set admin password
+      </h2>
+      <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
+        Step 1 of 4 – Protect your Gitvise instance with a password.
+      </p>
+
+      <Field label="Password" hint="Minimum 8 characters.">
+        <Input
+          type="password"
+          placeholder="••••••••"
+          value={form.password}
+          onChange={(e) => setForm({ password: e.target.value })}
+        />
+      </Field>
+
+      <Field label="Confirm password">
+        <Input
+          type="password"
+          placeholder="••••••••"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          style={{ borderColor: confirm && form.password !== confirm ? "var(--color-danger)" : undefined }}
+        />
+      </Field>
+
+      {error && (
+        <div style={{ color: "var(--color-danger)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-4)" }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Btn onClick={submit} disabled={!valid} loading={saving}>Next →</Btn>
+      </div>
+    </div>
+  );
+}
+
 function Step1({ form, setForm, onNext }: {
   form: FormState;
   setForm: (f: Partial<FormState>) => void;
@@ -132,7 +210,7 @@ function Step1({ form, setForm, onNext }: {
         Connect GitHub
       </h2>
       <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
-        Step 1 of 3 – Personal Access Token (classic) or fine-grained token.
+        Step 2 of 4 – Personal Access Token (classic) or fine-grained token.
       </p>
 
       <Field label="GitHub Token" hint="Required scopes: repo, read:org, workflow">
@@ -192,7 +270,7 @@ function Step2({ form, setForm, detectedLogin, onBack, onNext }: {
         Select organisation
       </h2>
       <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
-        Step 2 of 3 – What should be analysed?
+        Step 3 of 4 – What should be analysed?
       </p>
 
       <Field label="GitHub organisation or user" hint={`Detected: @${detectedLogin}`}>
@@ -243,7 +321,7 @@ function Step3({ form, setForm, onBack, onFinish, saving }: {
         Activate Pro license
       </h2>
       <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
-        Step 3 of 3 – Optional. Without a license key, Pro plugins run in demo mode.
+        Step 4 of 4 – Optional. Without a license key, Pro plugins run in demo mode.
       </p>
 
       <Field label="License Key" hint="Can be added later under Settings.">
@@ -283,13 +361,23 @@ export default function SetupPage() {
 
   // Redirect to /overview if setup is already completed
   useEffect(() => {
-    apiGet<{ completed: boolean }>("/api/core/setup/status")
-      .then(({ completed }) => { if (completed) router.replace("/overview"); })
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+    fetch(`${apiUrl}/api/core/setup/status`, { cache: "no-store", credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { completed: boolean; hasPassword: boolean }) => {
+        if (data.completed) {
+          router.replace("/overview");
+        } else if (data.hasPassword) {
+          // Password already set – skip step 0
+          setStep(1);
+        }
+      })
       .catch(() => {}); // backend unreachable – stay on setup page
   }, [router]);
   const [detectedLogin, setDetectedLogin] = useState("");
   const [saving, setSaving] = useState(false);
   const [form, setFormRaw] = useState<FormState>({
+    password: "",
     token: "",
     githubOrg: "",
     syncIntervalSec: 300,
@@ -336,21 +424,24 @@ export default function SetupPage() {
           <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, marginBottom: "var(--space-1)", color: "var(--color-text-primary)" }}>
             Set up Gitvise
           </div>
-          <StepIndicator current={step} total={3} />
+          <StepIndicator current={step} total={4} />
         </div>
 
         {step === 0 && (
+          <Step0 form={form} setForm={setForm} onNext={() => setStep(1)} />
+        )}
+        {step === 1 && (
           <Step1 form={form} setForm={setForm} onNext={(login) => {
             setDetectedLogin(login);
             setForm({ githubOrg: login });
-            setStep(1);
+            setStep(2);
           }} />
         )}
-        {step === 1 && (
-          <Step2 form={form} setForm={setForm} detectedLogin={detectedLogin} onBack={() => setStep(0)} onNext={() => setStep(2)} />
-        )}
         {step === 2 && (
-          <Step3 form={form} setForm={setForm} onBack={() => setStep(1)} onFinish={finish} saving={saving} />
+          <Step2 form={form} setForm={setForm} detectedLogin={detectedLogin} onBack={() => setStep(1)} onNext={() => setStep(3)} />
+        )}
+        {step === 3 && (
+          <Step3 form={form} setForm={setForm} onBack={() => setStep(2)} onFinish={finish} saving={saving} />
         )}
       </div>
     </div>
