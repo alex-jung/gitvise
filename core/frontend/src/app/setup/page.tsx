@@ -358,22 +358,27 @@ function Step3({ form, setForm, onBack, onFinish, saving }: {
 export default function SetupPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [checking, setChecking] = useState(true);
 
-  // Redirect to /overview if setup is already completed
+  // Check setup status before rendering any UI to avoid flash
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
     fetch(`${apiUrl}/api/core/setup/status`, { cache: "no-store", credentials: "include" })
       .then((r) => r.json())
       .then((data: { completed: boolean; hasPassword: boolean }) => {
         if (data.completed) {
-          router.replace("/overview");
-        } else if (data.hasPassword) {
+          window.location.href = "/overview";
+          // keep checking=true so nothing renders while redirecting
+          return;
+        }
+        if (data.hasPassword) {
           // Password already set – skip step 0
           setStep(1);
         }
+        setChecking(false);
       })
-      .catch(() => {}); // backend unreachable – stay on setup page
-  }, [router]);
+      .catch(() => setChecking(false)); // backend unreachable – show setup
+  }, []);
   const [detectedLogin, setDetectedLogin] = useState("");
   const [saving, setSaving] = useState(false);
   const [form, setFormRaw] = useState<FormState>({
@@ -401,6 +406,8 @@ export default function SetupPage() {
       setSaving(false);
     }
   };
+
+  if (checking) return null;
 
   return (
     <div style={{

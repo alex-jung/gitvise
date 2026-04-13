@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
 import { HealthBar } from "@/components/health-badge";
 import { RelativeTime } from "@/components/ui/relative-time";
+import { log } from "@/lib/log";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,22 +35,59 @@ export default function OverviewPage() {
   const [summary, setSummary] = useState<RepoSummary | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const syncStartedRef = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    log.sync("fetching initial repo summary");
     apiGet<RepoSummary>("/api/core/repos/summary")
       .catch(() => null)
       .then((s) => {
+        log.sync("summary loaded, total repos:", s?.total ?? 0);
         setSummary(s);
         setLoading(false);
       });
   }, []);
 
+  // Auto-trigger sync and poll when no data exists after initial load
+  const noData = !loading && (summary === null || summary.total === 0);
+
+  useEffect(() => {
+    if (!noData) return;
+    if (syncStartedRef.current) return;
+    syncStartedRef.current = true;
+    setSyncing(true);
+
+    log.sync("no repos found, triggering initial sync");
+    apiPost("/api/core/sync/trigger", {}).catch(() => {});
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const s = await apiGet<RepoSummary>("/api/core/repos/summary");
+        if (s && s.total > 0) {
+          log.sync("sync complete, repos available:", s.total);
+          clearInterval(pollRef.current!);
+          setSummary(s);
+          setSyncing(false);
+        }
+      } catch {
+        // continue polling
+      }
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [noData]);
+
   const triggerSync = async () => {
+    log.sync("manual sync triggered");
     setSyncing(true);
     try {
       await apiPost("/api/core/sync/trigger", {});
       await new Promise((r) => setTimeout(r, 3000));
       const s = await apiGet<RepoSummary>("/api/core/repos/summary");
+      log.sync("manual sync complete, repos:", s?.total ?? 0);
       setSummary(s);
     } catch {
       // silent
@@ -58,7 +96,62 @@ export default function OverviewPage() {
     }
   };
 
-  const noData = !loading && summary?.total === 0;
+  // Fullscreen loading while initial fetch is in progress
+  if (loading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--space-3)",
+          color: "var(--color-text-muted)",
+          fontSize: "var(--font-size-md)",
+        }}
+      >
+        <span style={{ animation: "pulse 1.5s infinite", fontSize: 24 }}>◈</span>
+        Loading...
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Fullscreen syncing overlay while auto-sync runs on first start
+  if (syncing && noData) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--space-3)",
+          color: "var(--color-text-muted)",
+          fontSize: "var(--font-size-md)",
+        }}
+      >
+        <span style={{ animation: "pulse 1.5s infinite", fontSize: 24 }}>◈</span>
+        Syncing repositories...
+        <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", opacity: 0.7 }}>
+          This may take a moment on first run.
+        </span>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -112,8 +205,8 @@ export default function OverviewPage() {
           />
         </div>
 
-        {/* No data state */}
-        {noData && (
+        {/* No data state – shown only if sync finished but still 0 repos (edge case) */}
+        {noData && !syncing && (
           <div
             style={{
               padding: "var(--space-6)",
@@ -125,7 +218,7 @@ export default function OverviewPage() {
             }}
           >
             <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
-              No repositories synced yet.
+              No repositories found. Check your GitHub organisation settings.
             </p>
             <button
               onClick={triggerSync}
@@ -138,11 +231,10 @@ export default function OverviewPage() {
                 border: "none",
                 fontSize: "var(--font-size-sm)",
                 fontWeight: 500,
-                cursor: syncing ? "not-allowed" : "pointer",
-                opacity: syncing ? 0.6 : 1,
+                cursor: "pointer",
               }}
             >
-              {syncing ? "Syncing..." : "Start first sync"}
+              ↻ Retry sync
             </button>
           </div>
         )}

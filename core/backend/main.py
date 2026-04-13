@@ -52,6 +52,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Auth middleware must be registered BEFORE CORSMiddleware so that CORS
+# becomes the outermost layer (last registered = outermost in Starlette).
+# This ensures CORS headers are added even to 401 error responses.
+app.middleware("http")(auth_middleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin, "http://localhost:3000"],
@@ -59,8 +64,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.middleware("http")(auth_middleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/core")

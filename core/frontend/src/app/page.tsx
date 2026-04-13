@@ -66,7 +66,7 @@ export default function Home() {
       }}
     >
       <span style={{ animation: "pulse 1.5s infinite" }}>◈</span>
-      Verbinde mit Backend...
+      Connecting to backend...
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }

@@ -4,16 +4,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { log } from "@/lib/log";
 
-export function Topbar() {
+interface TopbarProps {
+  onOpenSettings?: () => void;
+}
+
+export function Topbar({ onOpenSettings }: TopbarProps) {
   const router = useRouter();
+  // Always start empty (SSR-safe). useEffect reads cache + fetches.
   const [org, setOrg] = useState<string>("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Show cached value immediately (no flash), then refresh from API
+    const cached = localStorage.getItem("gitvise_org");
+    if (cached) {
+      log.nav("org name loaded from cache:", cached);
+      setOrg(cached);
+    }
+
     apiGet<{ githubOrg?: string }>("/api/core/setup/config")
-      .then((cfg) => setOrg(cfg?.githubOrg ?? ""))
+      .then((cfg) => {
+        const name = cfg?.githubOrg ?? "";
+        log.nav("org name fetched from API:", name);
+        setOrg(name);
+        localStorage.setItem("gitvise_org", name);
+      })
       .catch(() => {});
   }, []);
 
@@ -31,6 +49,7 @@ export function Topbar() {
   }, [dropdownOpen]);
 
   const logout = async () => {
+    log.auth("logging out");
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
       await fetch(`${apiUrl}/api/core/auth/logout`, {
@@ -40,7 +59,9 @@ export function Topbar() {
     } catch {
       // ignore
     }
-    router.replace("/login");
+    sessionStorage.removeItem("gitvise_authed");
+    log.auth("session cleared, redirecting to /login");
+    window.location.href = "/login";
   };
 
   return (
@@ -82,9 +103,10 @@ export function Topbar() {
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
         {/* Settings icon */}
-        <Link
-          href="/settings"
+        <button
+          type="button"
           title="Settings"
+          onClick={onOpenSettings}
           style={{
             display: "flex",
             alignItems: "center",
@@ -93,15 +115,17 @@ export function Topbar() {
             height: 32,
             borderRadius: "var(--radius-md)",
             color: "var(--color-text-muted)",
-            textDecoration: "none",
+            background: "transparent",
+            border: "none",
             fontSize: 16,
+            cursor: "pointer",
             transition: "background 120ms",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
           ⚙
-        </Link>
+        </button>
 
         {/* Avatar / user dropdown */}
         <div ref={dropdownRef} style={{ position: "relative" }}>

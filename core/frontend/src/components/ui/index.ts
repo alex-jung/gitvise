@@ -31,5 +31,8 @@ export { ErrorBoundary } from "./error-boundary";
 export { ProLock } from "./pro-lock";
 export { WidgetDemoBar } from "./widget-demo-bar";
 
+// Overlays
+export { Modal } from "./modal";
+
 // Util
 export { RelativeTime } from "./relative-time";
