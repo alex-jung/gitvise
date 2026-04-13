@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { ProLock } from "@/components/ui/pro-lock";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { HealthScoreCard } from "@/plugins/repo_health/widgets/health-score-card";
 import { HealthTable } from "@/plugins/repo_health/widgets/health-table";
+import { usePluginRegistry } from "@/context/PluginContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,7 +46,7 @@ interface WidgetDef {
 
 type WidgetComponent = React.ComponentType<{ config: Record<string, unknown> }>;
 
-const WIDGET_REGISTRY: Record<string, WidgetComponent> = {
+const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
   "repo-health-score": HealthScoreCard as WidgetComponent,
   "repo-health-table": HealthTable as WidgetComponent,
 };
@@ -85,6 +87,14 @@ export function DashboardGrid() {
   const [widgetDefs, setWidgetDefs] = useState<Record<string, WidgetDef>>({});
   const [loading, setLoading] = useState(true);
   const [hasLicense, setHasLicense] = useState(false);
+
+  const { dynamicWidgets } = usePluginRegistry();
+
+  // Merge built-in and dynamically registered plugin widgets
+  const widgetRegistry = useMemo<Record<string, WidgetComponent>>(
+    () => ({ ...BUILTIN_WIDGETS, ...Object.fromEntries(dynamicWidgets) }),
+    [dynamicWidgets]
+  );
 
   useEffect(() => {
     Promise.all([
@@ -150,26 +160,28 @@ export function DashboardGrid() {
         const isPro = (def?.tier ?? def?.pluginTier) === "pro";
         const isLocked = isPro && !hasLicense;
         const span = colSpan(item.width);
-        const WidgetComp = WIDGET_REGISTRY[item.widgetId];
+        const WidgetComp = widgetRegistry[item.widgetId];
 
         return (
           <div
             key={`${item.pluginId}-${item.widgetId}`}
             style={{ gridColumn: span > 1 ? `span ${span}` : undefined }}
           >
-            {WidgetComp ? (
-              <DashboardCard title={title} demoMode={isPro && !hasLicense}>
-                {isLocked ? (
-                  <ProLock>
+            <ErrorBoundary>
+              {WidgetComp ? (
+                <DashboardCard title={title} demoMode={isPro && !hasLicense}>
+                  {isLocked ? (
+                    <ProLock>
+                      <WidgetComp config={item.config} />
+                    </ProLock>
+                  ) : (
                     <WidgetComp config={item.config} />
-                  </ProLock>
-                ) : (
-                  <WidgetComp config={item.config} />
-                )}
-              </DashboardCard>
-            ) : (
-              <PlaceholderWidget title={title} />
-            )}
+                  )}
+                </DashboardCard>
+              ) : (
+                <PlaceholderWidget title={title} />
+              )}
+            </ErrorBoundary>
           </div>
         );
       })}
