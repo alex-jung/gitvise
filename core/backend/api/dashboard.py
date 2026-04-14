@@ -12,43 +12,125 @@ router = APIRouter(tags=["dashboard"])
 DASHBOARD_CONFIG_KEY = "dashboard_config"
 
 
-def _default_dashboard(request: Request) -> dict:
-    """Generate a default dashboard from registered widget manifests."""
-    registry = getattr(request.app.state, "plugin_registry", None)
+def _widget_defaults(widget: dict) -> dict:
+    """Extract default config values from a widget definition."""
+    return {
+        k: v.get("default")
+        for k, v in widget.get("config", {}).items()
+        if "default" in v
+    }
+
+
+def _span(width: str) -> int:
+    if width == "full":
+        return 3
+    if width == "2/3":
+        return 2
+    return 1
+
+
+def _build_layout_from_spec(spec: list[dict], plugin) -> list[dict]:
+    """Convert a plugin's defaultDashboard.layout spec into full layout items.
+
+    Auto-computes row/col and merges widget defaults with any spec-level config overrides.
+    """
+    widget_map = {w["id"]: w for w in plugin.widgets}
     layout = []
-    row = 1
     col = 1
+    row = 1
+
+    for item in spec:
+        widget_id = item.get("widgetId")
+        if not widget_id:
+            continue
+        widget_def = widget_map.get(widget_id, {})
+        width = item.get("width") or widget_def.get("defaultSize", "1/3")
+        span = _span(width)
+
+        # Wrap to next row if widget doesn't fit
+        if col + span - 1 > 3:
+            col = 1
+            row += 1
+
+        config = {**_widget_defaults(widget_def), **item.get("config", {})}
+
+        layout.append({
+            "widgetId": widget_id,
+            "pluginId": plugin.id,
+            "row": row,
+            "col": col,
+            "width": width,
+            "config": config,
+        })
+
+        col += span
+        if col > 3:
+            col = 1
+            row += 1
+
+    return layout
+
+
+def _build_layout_from_widgets(plugin) -> list[dict]:
+    """Auto-generate a flat layout from all of a plugin's widgets (fallback)."""
+    layout = []
+    col = 1
+    row = 1
+    for widget in plugin.widgets:
+        width = widget.get("defaultSize", "1/3")
+        span = _span(width)
+        if col + span - 1 > 3:
+            col = 1
+            row += 1
+        layout.append({
+            "widgetId": widget["id"],
+            "pluginId": plugin.id,
+            "row": row,
+            "col": col,
+            "width": width,
+            "config": _widget_defaults(widget),
+        })
+        col += span
+        if col > 3:
+            col = 1
+            row += 1
+    return layout
+
+
+def _default_dashboard(request: Request) -> dict:
+    """Generate default dashboards from registered plugin manifests.
+
+    Each plugin that defines a ``defaultDashboard`` in its plugin.json gets its
+    own named dashboard tab.  Plugins without a ``defaultDashboard`` fall back
+    to an auto-generated flat layout from their widget list.
+    """
+    registry = getattr(request.app.state, "plugin_registry", None)
+    dashboards = []
 
     if registry:
         for plugin in registry.all():
-            for widget in plugin.widgets:
-                layout.append({
-                    "widgetId": widget["id"],
-                    "pluginId": plugin.id,
-                    "row": row,
-                    "col": col,
-                    "width": widget.get("defaultSize", "1/3"),
-                    "config": {
-                        k: v.get("default")
-                        for k, v in widget.get("config", {}).items()
-                        if "default" in v
-                    },
-                })
-                col += 1
-                if col > 3:
-                    col = 1
-                    row += 1
+            if plugin.default_dashboard:
+                spec = plugin.default_dashboard.get("layout", [])
+                layout = _build_layout_from_spec(spec, plugin)
+                name = plugin.default_dashboard.get("name", plugin.name)
+            else:
+                layout = _build_layout_from_widgets(plugin)
+                name = plugin.name
 
-    return {
-        "dashboards": [
-            {
-                "id": "default",
-                "name": "Overview",
-                "isDefault": True,
+            if not layout:
+                continue
+
+            dashboards.append({
+                "id": plugin.id,
+                "name": name,
+                "isDefault": len(dashboards) == 0,
                 "layout": layout,
-            }
-        ]
-    }
+            })
+
+    if not dashboards:
+        dashboards = [{"id": "default", "name": "Overview", "isDefault": True, "layout": []}]
+
+    return {"dashboards": dashboards}
 
 
 @router.get("/dashboard")

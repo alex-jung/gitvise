@@ -18,7 +18,8 @@ class PluginManifest:
     description: str
     plugin_dir: str = ""   # absolute path to the directory containing plugin.json
     nav_item: dict[str, Any] = field(default_factory=dict)
-    widgets: list[dict] = field(default_factory=list)        # new: full widget defs with config schema
+    widgets: list[dict] = field(default_factory=list)        # full widget defs with config schema
+    default_dashboard: dict = field(default_factory=dict)    # optional per-plugin default layout
     backend_routes: list[dict] = field(default_factory=list)
     sync_hooks: list[str] = field(default_factory=list)
     sync_module: str = ""
@@ -41,6 +42,7 @@ class PluginManifest:
             "description": self.description,
             "hasBundle": self.bundle_path is not None,
             "widgets": self.widgets,
+            "defaultDashboard": self.default_dashboard,
             "ui": {
                 "navItem": self.nav_item,
             },
@@ -91,6 +93,7 @@ class PluginRegistry:
             plugin_dir=os.path.dirname(os.path.abspath(path)),
             nav_item=ui.get("navItem", {}),
             widgets=data.get("widgets", []),
+            default_dashboard=data.get("defaultDashboard", {}),
             backend_routes=backend.get("routes", []),
             sync_hooks=backend.get("syncHooks", []),
             sync_module=backend.get("syncModule", ""),
