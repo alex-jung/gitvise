@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "core/frontend",
-    "core/plugin-api"
+    "core/plugin-api",
+    "packages/ui"
   ]
 }
