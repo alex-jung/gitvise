@@ -147,23 +147,43 @@ interface TabBarProps {
   activeId: string;
   editMode: boolean;
   saving: boolean;
+  draftName: string;
+  canDelete: boolean;
   onTabChange: (id: string) => void;
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
   onReset: () => void;
+  onRename: (name: string) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }
+
+const tabBtnBase: React.CSSProperties = {
+  padding: "var(--space-1) var(--space-3)",
+  background: "transparent",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-md)",
+  fontSize: "var(--font-size-xs)",
+  cursor: "pointer",
+  fontWeight: 500,
+};
 
 function TabBar({
   dashboards,
   activeId,
   editMode,
   saving,
+  draftName,
+  canDelete,
   onTabChange,
   onEdit,
   onSave,
   onCancel,
   onReset,
+  onRename,
+  onDuplicate,
+  onDelete,
 }: TabBarProps) {
   return (
     <div
@@ -173,11 +193,11 @@ function TabBar({
         borderBottom: "1px solid var(--color-border)",
         marginBottom: "var(--space-5)",
         gap: "var(--space-1)",
+        minHeight: 38,
       }}
     >
       {/* Tabs (hidden in edit mode to avoid distraction) */}
       {!editMode &&
-        dashboards.length > 1 &&
         dashboards.map((d) => {
           const isActive = d.id === activeId;
           return (
@@ -207,88 +227,81 @@ function TabBar({
           );
         })}
 
+      {/* Name input in edit mode */}
       {editMode && (
-        <span
+        <input
+          type="text"
+          value={draftName}
+          onChange={(e) => onRename(e.target.value)}
           style={{
             fontSize: "var(--font-size-sm)",
             fontWeight: 600,
             color: "var(--color-text-primary)",
-            padding: "var(--space-2) var(--space-2)",
+            background: "transparent",
+            border: "none",
+            borderBottom: "2px solid var(--color-primary)",
+            outline: "none",
+            padding: "var(--space-1) var(--space-2)",
             marginBottom: -1,
+            minWidth: 120,
+            maxWidth: 240,
           }}
-        >
-          Dashboard bearbeiten
-        </span>
+        />
       )}
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Edit / Save / Cancel / Reset */}
-      {!editMode ? (
-        <button
-          onClick={onEdit}
-          title="Dashboard bearbeiten"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-            padding: "var(--space-1) var(--space-3)",
-            marginBottom: -1,
-            background: "transparent",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            color: "var(--color-text-muted)",
-            fontSize: "var(--font-size-xs)",
-            cursor: "pointer",
-            fontWeight: 500,
-            transition: "border-color 120ms, color 120ms",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "var(--color-primary)";
-            e.currentTarget.style.color = "var(--color-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--color-border)";
-            e.currentTarget.style.color = "var(--color-text-muted)";
-          }}
-        >
-          ✎ Bearbeiten
-        </button>
-      ) : (
+      {/* View-mode actions */}
+      {!editMode && (
+        <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: -1 }}>
+          <button
+            onClick={onDuplicate}
+            title="Dashboard duplizieren"
+            style={{ ...tabBtnBase, color: "var(--color-text-muted)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-primary)"; e.currentTarget.style.borderColor = "var(--color-primary)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-muted)"; e.currentTarget.style.borderColor = "var(--color-border)"; }}
+          >
+            ⧉ Duplizieren
+          </button>
+          {canDelete && (
+            <button
+              onClick={onDelete}
+              title="Dashboard löschen"
+              style={{ ...tabBtnBase, color: "var(--color-danger)", borderColor: "var(--color-border)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-danger)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; }}
+            >
+              ✕ Löschen
+            </button>
+          )}
+          <button
+            onClick={onEdit}
+            title="Dashboard bearbeiten"
+            style={{ ...tabBtnBase, color: "var(--color-text-muted)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-primary)"; e.currentTarget.style.color = "var(--color-primary)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-text-muted)"; }}
+          >
+            ✎ Bearbeiten
+          </button>
+        </div>
+      )}
+
+      {/* Edit-mode actions */}
+      {editMode && (
         <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: -1 }}>
           <button
             onClick={onReset}
             disabled={saving}
             title="Standard-Dashboard wiederherstellen"
-            style={{
-              padding: "var(--space-1) var(--space-3)",
-              background: "transparent",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              color: "var(--color-text-muted)",
-              fontSize: "var(--font-size-xs)",
-              cursor: saving ? "not-allowed" : "pointer",
-              fontWeight: 500,
-              opacity: saving ? 0.6 : 1,
-            }}
+            style={{ ...tabBtnBase, color: "var(--color-text-muted)", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}
           >
             ↺ Zurücksetzen
           </button>
           <button
             onClick={onCancel}
             disabled={saving}
-            style={{
-              padding: "var(--space-1) var(--space-3)",
-              background: "transparent",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              color: "var(--color-text-muted)",
-              fontSize: "var(--font-size-xs)",
-              cursor: saving ? "not-allowed" : "pointer",
-              fontWeight: 500,
-              opacity: saving ? 0.6 : 1,
-            }}
+            style={{ ...tabBtnBase, color: "var(--color-text-muted)", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}
           >
             ✕ Abbrechen
           </button>
@@ -296,12 +309,10 @@ function TabBar({
             onClick={onSave}
             disabled={saving}
             style={{
-              padding: "var(--space-1) var(--space-3)",
+              ...tabBtnBase,
               background: "var(--color-primary)",
               border: "none",
-              borderRadius: "var(--radius-md)",
               color: "var(--color-text-inverse)",
-              fontSize: "var(--font-size-xs)",
               cursor: saving ? "not-allowed" : "pointer",
               fontWeight: 600,
               opacity: saving ? 0.7 : 1,
@@ -328,6 +339,7 @@ export function DashboardGrid() {
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
   const [draftLayout, setDraftLayout] = useState<WidgetLayout[]>([]);
+  const [draftName, setDraftName] = useState("");
   const [saving, setSaving] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
@@ -378,6 +390,7 @@ export function DashboardGrid() {
 
   const enterEdit = () => {
     setDraftLayout(activeDashboard?.layout ?? []);
+    setDraftName(activeDashboard?.name ?? "");
     setEditMode(true);
   };
 
@@ -385,6 +398,7 @@ export function DashboardGrid() {
     setEditMode(false);
     setCatalogOpen(false);
     setDraftLayout([]);
+    setDraftName("");
   };
 
   const saveEdit = async () => {
@@ -392,20 +406,65 @@ export function DashboardGrid() {
     setSaving(true);
     try {
       const newLayout = recomputeGrid(draftLayout);
+      const newName = draftName.trim() || activeDashboard.name;
       const newConfig: DashboardConfig = {
         ...config,
         dashboards: config.dashboards.map((d) =>
-          d.id === activeDashboard.id ? { ...d, layout: newLayout } : d
+          d.id === activeDashboard.id
+            ? { ...d, name: newName, layout: newLayout }
+            : d
         ),
       };
       await apiPost("/api/core/dashboard", newConfig);
       setConfig(newConfig);
       setEditMode(false);
       setCatalogOpen(false);
+      setDraftName("");
     } catch {
       // silent – TODO: show toast
     } finally {
       setSaving(false);
+    }
+  };
+
+  const duplicateDashboard = async () => {
+    if (!config || !activeDashboard) return;
+    const newId = `${activeDashboard.id}-copy-${Date.now().toString(36)}`;
+    const copy: Dashboard = {
+      ...activeDashboard,
+      id: newId,
+      name: `${activeDashboard.name} (Kopie)`,
+      isDefault: false,
+    };
+    const newConfig: DashboardConfig = {
+      ...config,
+      dashboards: [...config.dashboards, copy],
+    };
+    try {
+      await apiPost("/api/core/dashboard", newConfig);
+      setConfig(newConfig);
+      setActiveDashboardId(newId);
+    } catch {
+      // silent
+    }
+  };
+
+  const deleteDashboard = async () => {
+    if (!config || !activeDashboard) return;
+    if (!confirm(`Dashboard „${activeDashboard.name}" löschen?`)) return;
+    const remaining = config.dashboards.filter((d) => d.id !== activeDashboard.id);
+    // Ensure at least one default
+    if (remaining.length > 0 && !remaining.some((d) => d.isDefault)) {
+      remaining[0] = { ...remaining[0], isDefault: true };
+    }
+    const newConfig: DashboardConfig = { ...config, dashboards: remaining };
+    try {
+      await apiPost("/api/core/dashboard", newConfig);
+      setConfig(newConfig);
+      const next = remaining.find((d) => d.isDefault) ?? remaining[0];
+      setActiveDashboardId(next?.id ?? null);
+    } catch {
+      // silent
     }
   };
 
@@ -544,11 +603,16 @@ export function DashboardGrid() {
         activeId={activeDashboard?.id ?? ""}
         editMode={editMode}
         saving={saving}
+        draftName={draftName}
+        canDelete={dashboards.length > 1}
         onTabChange={handleTabChange}
         onEdit={enterEdit}
         onSave={saveEdit}
         onCancel={cancelEdit}
         onReset={resetToDefault}
+        onRename={setDraftName}
+        onDuplicate={duplicateDashboard}
+        onDelete={deleteDashboard}
       />
 
       {/* Empty state */}
