@@ -19,16 +19,21 @@ services:
 
     frontend:
         image: node:22-alpine
-        working_dir: /app
+        # Mount the full monorepo root so workspace packages (packages/ui) are available.
+        # npm install runs from /repo (the workspace root), which links @gitvise/ui locally.
+        # The dev server then starts via the core/frontend workspace script.
+        working_dir: /repo
         volumes:
-            - ./core/frontend:/app
-            - /app/node_modules
+            - ./:/repo
+            - /repo/node_modules                       # isolate root node_modules from host
+            - /repo/core/frontend/node_modules         # isolate frontend node_modules from host
+            - /repo/core/frontend/.next                # persist Next.js build cache
         ports:
             - "3000:3000"
         environment:
             - NODE_ENV=development
             - NEXT_PUBLIC_API_URL=http://localhost:3001
-        command: sh -c "npm install && npm run dev"
+        command: sh -c "npm install && npm run dev -w core/frontend"
         depends_on:
             - backend
         restart: unless-stopped
