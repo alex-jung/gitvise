@@ -15,6 +15,17 @@ export type { Column } from "./table";
 export { Sparkline } from "./sparkline";
 export { LineChart } from "./line-chart";
 export type { LineChartSeries } from "./line-chart";
+export { BarChart } from "./bar-chart";
+export type { BarChartSeries } from "./bar-chart";
+export { PieChart } from "./pie-chart";
+export type { PieSlice } from "./pie-chart";
+export { DonutChart } from "./donut-chart";
+export { Gauge } from "./gauge";
+export type { GaugeZone } from "./gauge";
+export { Heatmap } from "./heatmap";
+export { Timeline } from "./timeline";
+export type { TimelineEvent } from "./timeline";
+export { SplitView } from "./split-view";
 
 // Layout
 export { DashboardCard } from "./dashboard-card";
