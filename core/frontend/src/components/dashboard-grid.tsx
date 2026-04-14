@@ -8,6 +8,12 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HealthScoreCard } from "@/plugins/repo_health/widgets/health-score-card";
 import { HealthTable } from "@/plugins/repo_health/widgets/health-table";
+import { PrsOverviewCard } from "@/plugins/pull_requests/widgets/prs-overview-card";
+import { IssuesOverviewCard } from "@/plugins/pull_requests/widgets/issues-overview-card";
+import { PrsDraftRatio } from "@/plugins/pull_requests/widgets/prs-draft-ratio";
+import { PrsAgeDistribution } from "@/plugins/pull_requests/widgets/prs-age-distribution";
+import { IssuesByLabel } from "@/plugins/pull_requests/widgets/issues-by-label";
+import { PrsStaleTable } from "@/plugins/pull_requests/widgets/prs-stale-table";
 import { usePluginRegistry } from "@/context/PluginContext";
 import { WidgetCatalog, type WidgetDef } from "@/components/widget-catalog";
 
@@ -38,8 +44,16 @@ interface DashboardConfig {
 type WidgetComponent = React.ComponentType<{ config: Record<string, unknown> }>;
 
 const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
+  // repo-health
   "repo-health-score": HealthScoreCard as WidgetComponent,
   "repo-health-table": HealthTable as WidgetComponent,
+  // pull-requests
+  "prs-open-count": PrsOverviewCard as WidgetComponent,
+  "issues-open-count": IssuesOverviewCard as WidgetComponent,
+  "prs-draft-ratio": PrsDraftRatio as WidgetComponent,
+  "prs-age-distribution": PrsAgeDistribution as WidgetComponent,
+  "issues-by-label": IssuesByLabel as WidgetComponent,
+  "prs-stale-table": PrsStaleTable as WidgetComponent,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

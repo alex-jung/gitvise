@@ -13,6 +13,7 @@ from api.setup import router as setup_router
 from api.plugins import router as plugins_router
 from api.sync import router as sync_router
 from api.repos import router as repos_router
+from api.pull_requests import router as pull_requests_router
 
 
 @asynccontextmanager
@@ -72,6 +73,7 @@ app.include_router(setup_router, prefix="/api/core")
 app.include_router(plugins_router, prefix="/api/core")
 app.include_router(sync_router, prefix="/api/core")
 app.include_router(repos_router, prefix="/api/core")
+app.include_router(pull_requests_router, prefix="/api/core")
 
 
 @app.get("/health")
