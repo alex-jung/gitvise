@@ -147,13 +147,25 @@ async def get_dashboard(request: Request, db: DBSession = Depends(get_db)):
 
 
 def _enforce_community_config(widget_def: dict, config: dict, has_license: bool) -> dict:
-    """Reset Pro-only config fields to their community defaults when no license is present."""
+    """Reset Pro-only config fields to their community defaults when no license is present.
+
+    Also caps numeric fields that define a ``maxCommunity`` ceiling so extended
+    time ranges (> 90 days) are only available to Pro users.
+    """
     if has_license:
         return config
     result = dict(config)
     for key, field in widget_def.get("config", {}).items():
+        # Hard-lock entire Pro fields
         if field.get("tier") == "pro":
             result[key] = field.get("default")
+            continue
+        # Cap numeric fields to their community maximum
+        max_community = field.get("maxCommunity")
+        if max_community is not None:
+            current = result.get(key)
+            if isinstance(current, (int, float)):
+                result[key] = min(current, max_community)
     return result
 
 

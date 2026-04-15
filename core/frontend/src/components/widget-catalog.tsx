@@ -6,12 +6,13 @@ export interface WidgetDef {
   id: string;
   type: string;
   title: string;
+  description?: string;
   defaultSize?: string;
   tier: string;
   pluginId: string;
   pluginName: string;
   pluginTier: string;
-  config?: Record<string, { type: string; label: string; default?: unknown; tier?: string }>;
+  config?: Record<string, { type: string; label: string; default?: unknown; tier?: string; maxCommunity?: number }>;
 }
 
 interface WidgetCatalogProps {
@@ -212,7 +213,7 @@ export function WidgetCatalog({
                           display: "flex",
                           alignItems: "center",
                           gap: "var(--space-2)",
-                          marginBottom: 2,
+                          marginBottom: w.description ? 3 : 0,
                         }}
                       >
                         <span
@@ -244,14 +245,25 @@ export function WidgetCatalog({
                           </span>
                         )}
                       </div>
-                      <div
-                        style={{
-                          fontSize: "var(--font-size-xs)",
-                          color: "var(--color-text-muted)",
-                        }}
-                      >
-                        {w.defaultSize ?? "1/3"}
-                      </div>
+                      {w.description ? (
+                        <div
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: "var(--color-text-muted)",
+                            lineHeight: 1.4,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {w.description}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                          {w.defaultSize ?? "1/3"}
+                        </div>
+                      )}
                     </div>
 
                     <button

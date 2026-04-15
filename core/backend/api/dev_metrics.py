@@ -7,8 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.db import get_db
+from core.license import is_pro
 from models.commit import Commit
 from models.pull_request import PullRequest
+
+_COMMUNITY_MAX_DAYS = 90
+_COMMUNITY_MAX_WEEKS = 12
 
 router = APIRouter(tags=["developer-metrics"])
 
@@ -71,8 +75,10 @@ def _closed_prs_in_window(prs: list[PullRequest], days: int) -> list[PullRequest
 @router.get("/dev/summary")
 def dev_summary(
     db: Session = Depends(get_db),
-    days: int = Query(30, ge=7, le=90),
+    days: int = Query(30, ge=7, le=365),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_prs = db.execute(select(PullRequest)).scalars().all()
     all_commits = db.execute(select(Commit)).scalars().all()
 
@@ -109,8 +115,10 @@ def dev_summary(
 @router.get("/dev/cycle-time-trend")
 def dev_cycle_time_trend(
     db: Session = Depends(get_db),
-    weeks: int = Query(8, ge=4, le=12),
+    weeks: int = Query(8, ge=4, le=52),
 ):
+    if not is_pro(db):
+        weeks = min(weeks, _COMMUNITY_MAX_WEEKS)
     all_prs = db.execute(select(PullRequest)).scalars().all()
 
     now = datetime.now(timezone.utc)
@@ -149,9 +157,11 @@ def dev_cycle_time_trend(
 @router.get("/dev/leaderboard")
 def dev_leaderboard(
     db: Session = Depends(get_db),
-    days: int = Query(30, ge=7, le=90),
+    days: int = Query(30, ge=7, le=365),
     limit: int = Query(20, ge=5, le=100),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_prs = db.execute(select(PullRequest)).scalars().all()
     all_commits = db.execute(select(Commit)).scalars().all()
     cut = _cutoff(days)

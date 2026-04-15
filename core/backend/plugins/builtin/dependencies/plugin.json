@@ -9,14 +9,23 @@
       "id": "vuln-summary",
       "type": "stat-card",
       "title": "Vulnerabilities",
+      "description": "Total open Dependabot alerts broken down by severity: Critical, High, Medium, Low.",
       "defaultSize": "1/3",
       "tier": "community",
-      "config": {}
+      "config": {
+        "severity_weighting": {
+          "type": "boolean",
+          "label": "Custom severity weighting",
+          "default": false,
+          "tier": "pro"
+        }
+      }
     },
     {
       "id": "security-score",
       "type": "gauge",
       "title": "Security Score",
+      "description": "Single 0–100 score reflecting the overall vulnerability posture of your organisation.",
       "defaultSize": "1/3",
       "tier": "community",
       "config": {}
@@ -25,6 +34,7 @@
       "id": "affected-repos",
       "type": "stat-card",
       "title": "Affected Repositories",
+      "description": "Number of repositories with at least one open vulnerability alert.",
       "defaultSize": "1/3",
       "tier": "community",
       "config": {}
@@ -33,6 +43,7 @@
       "id": "license-overview",
       "type": "bar-chart",
       "title": "License Distribution",
+      "description": "Breakdown of open-source licenses in use across all repositories.",
       "defaultSize": "full",
       "tier": "community",
       "config": {
@@ -42,6 +53,12 @@
           "default": 10,
           "min": 3,
           "max": 30
+        },
+        "license_blacklist": {
+          "type": "string",
+          "label": "Flagged licenses (comma-separated)",
+          "default": "",
+          "tier": "pro"
         }
       }
     }

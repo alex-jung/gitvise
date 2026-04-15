@@ -9,6 +9,7 @@
       "id": "team-contributors",
       "type": "stat-card",
       "title": "Active Contributors",
+      "description": "Number of unique contributors who committed in the selected time window.",
       "defaultSize": "1/3",
       "tier": "community",
       "config": {
@@ -17,12 +18,19 @@
           "label": "Lookback (days)",
           "default": 30,
           "min": 7,
-          "max": 90
+          "max": 365,
+          "maxCommunity": 90
         },
         "exclude_bots": {
           "type": "boolean",
           "label": "Exclude bots",
           "default": true
+        },
+        "breakdown": {
+          "type": "boolean",
+          "label": "Breakdown by repository",
+          "default": false,
+          "tier": "pro"
         }
       }
     },
@@ -30,6 +38,7 @@
       "id": "team-new-contributors",
       "type": "stat-card",
       "title": "New Contributors",
+      "description": "Contributors whose first-ever commit to any repository fell within the selected window.",
       "defaultSize": "1/3",
       "tier": "community",
       "config": {
@@ -38,7 +47,8 @@
           "label": "Lookback (days)",
           "default": 30,
           "min": 7,
-          "max": 90
+          "max": 365,
+          "maxCommunity": 90
         },
         "exclude_bots": {
           "type": "boolean",
@@ -51,6 +61,7 @@
       "id": "team-commit-activity",
       "type": "bar-chart",
       "title": "Commit Activity",
+      "description": "Daily commit volume over time. Spot spikes and quiet periods at a glance.",
       "defaultSize": "1/3",
       "tier": "community",
       "config": {
@@ -59,7 +70,8 @@
           "label": "Lookback (days)",
           "default": 14,
           "min": 7,
-          "max": 30
+          "max": 365,
+          "maxCommunity": 90
         },
         "exclude_bots": {
           "type": "boolean",
@@ -72,6 +84,7 @@
       "id": "team-activity-heatmap",
       "type": "heatmap",
       "title": "Activity Heatmap",
+      "description": "GitHub-style contribution heatmap showing commit density by day-of-week and week.",
       "defaultSize": "full",
       "tier": "community",
       "config": {
@@ -80,7 +93,8 @@
           "label": "Weeks to show",
           "default": 12,
           "min": 4,
-          "max": 26
+          "max": 52,
+          "maxCommunity": 26
         },
         "exclude_bots": {
           "type": "boolean",

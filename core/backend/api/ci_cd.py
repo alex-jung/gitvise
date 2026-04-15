@@ -7,7 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.db import get_db
+from core.license import is_pro
 from models.workflow_run import WorkflowRun
+
+_COMMUNITY_MAX_DAYS = 90
 
 router = APIRouter(tags=["ci-cd"])
 
@@ -30,7 +33,9 @@ def _recent(runs: list[WorkflowRun], days: int) -> list[WorkflowRun]:
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 @router.get("/ci/summary")
-def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=90)):
+def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -62,7 +67,9 @@ def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=90))
 # ── Failing workflows ─────────────────────────────────────────────────────────
 
 @router.get("/ci/failing")
-def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=90)):
+def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -98,7 +105,9 @@ def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=90))
 # ── Duration trend ────────────────────────────────────────────────────────────
 
 @router.get("/ci/duration-trend")
-def ci_duration_trend(db: Session = Depends(get_db), days: int = Query(14, ge=7, le=90)):
+def ci_duration_trend(db: Session = Depends(get_db), days: int = Query(14, ge=7, le=365)):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -126,9 +135,11 @@ def ci_duration_trend(db: Session = Depends(get_db), days: int = Query(14, ge=7,
 @router.get("/ci/runs")
 def ci_runs(
     db: Session = Depends(get_db),
-    days: int = Query(7, ge=1, le=90),
+    days: int = Query(7, ge=1, le=365),
     limit: int = Query(100, ge=1, le=500),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
     runs.sort(key=lambda r: (r.created_at or datetime.min).isoformat(), reverse=True)

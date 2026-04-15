@@ -1,0 +1,59 @@
+{
+  "id": "alerts",
+  "name": "Alerts & Notifications",
+  "version": "1.0.0",
+  "tier": "community",
+  "description": "Aggregates critical events across all plugins and delivers them via webhooks or e-mail digest.",
+  "widgets": [
+    {
+      "id": "alert-status",
+      "type": "stat-card",
+      "title": "Alert Status",
+      "description": "Summary of active alerts: critical vulnerabilities, stale repos, failing CI and overdue PRs.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "stale_threshold_days": {
+          "type": "number",
+          "label": "Stale repo threshold (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365
+        },
+        "pr_stale_days": {
+          "type": "number",
+          "label": "Stale PR threshold (days)",
+          "default": 14,
+          "min": 1,
+          "max": 90
+        },
+        "show_details": {
+          "type": "boolean",
+          "label": "Show breakdown by category",
+          "default": true
+        }
+      }
+    }
+  ],
+  "defaultDashboard": {
+    "name": "Alerts & Notifications",
+    "layout": [
+      { "widgetId": "alert-status", "width": "1/3" }
+    ]
+  },
+  "ui": {
+    "navItem": {
+      "label": "Alerts",
+      "icon": "◎",
+      "path": "/alerts",
+      "order": 7
+    }
+  },
+  "backend": {
+    "syncHooks": [],
+    "syncModule": ""
+  },
+  "license": {
+    "required": false
+  }
+}

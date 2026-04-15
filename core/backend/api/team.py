@@ -7,7 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.db import get_db
+from core.license import is_pro
 from models.commit import Commit
+
+_COMMUNITY_MAX_DAYS = 90
+_COMMUNITY_MAX_WEEKS = 26
 
 router = APIRouter(tags=["team"])
 
@@ -47,9 +51,11 @@ def _filter(commits: list[Commit], days: int, exclude_bots: bool) -> list[Commit
 @router.get("/team/summary")
 def team_summary(
     db: Session = Depends(get_db),
-    days: int = Query(30, ge=7, le=90),
+    days: int = Query(30, ge=7, le=365),
     exclude_bots: bool = Query(True),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
@@ -84,10 +90,12 @@ def team_summary(
 @router.get("/team/contributors")
 def team_contributors(
     db: Session = Depends(get_db),
-    days: int = Query(30, ge=7, le=90),
+    days: int = Query(30, ge=7, le=365),
     exclude_bots: bool = Query(True),
     limit: int = Query(20, ge=1, le=100),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
@@ -129,9 +137,11 @@ def team_contributors(
 @router.get("/team/commit-activity")
 def team_commit_activity(
     db: Session = Depends(get_db),
-    days: int = Query(14, ge=7, le=90),
+    days: int = Query(14, ge=7, le=365),
     exclude_bots: bool = Query(True),
 ):
+    if not is_pro(db):
+        days = min(days, _COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
@@ -154,9 +164,11 @@ def team_commit_activity(
 @router.get("/team/heatmap")
 def team_heatmap(
     db: Session = Depends(get_db),
-    weeks: int = Query(12, ge=4, le=26),
+    weeks: int = Query(12, ge=4, le=52),
     exclude_bots: bool = Query(True),
 ):
+    if not is_pro(db):
+        weeks = min(weeks, _COMMUNITY_MAX_WEEKS)
     """
     Returns a 7-row × weeks-col matrix of commit counts.
     Row 0 = Monday, row 6 = Sunday.

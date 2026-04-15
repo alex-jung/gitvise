@@ -31,6 +31,7 @@ import { VulnSummary } from "@/plugins/dependencies/widgets/vuln-summary";
 import { SecurityScore } from "@/plugins/dependencies/widgets/security-score";
 import { AffectedRepos } from "@/plugins/dependencies/widgets/affected-repos";
 import { LicenseOverview } from "@/plugins/dependencies/widgets/license-overview";
+import { AlertStatus } from "@/plugins/alerts/widgets/alert-status";
 import { usePluginRegistry } from "@/context/PluginContext";
 import { WidgetCatalog, type WidgetDef } from "@/components/widget-catalog";
 
@@ -92,6 +93,8 @@ const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
   "team-new-contributors": TeamNewContributors as WidgetComponent,
   "team-commit-activity": TeamCommitActivity as WidgetComponent,
   "team-activity-heatmap": TeamActivityHeatmap as WidgetComponent,
+  // alerts
+  "alert-status": AlertStatus as WidgetComponent,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

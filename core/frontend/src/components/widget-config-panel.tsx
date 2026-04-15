@@ -10,6 +10,7 @@ interface ConfigFieldDef {
   max?: number;
   options?: string[];
   tier?: "pro";
+  maxCommunity?: number;
 }
 
 interface WidgetDef {
@@ -43,6 +44,11 @@ export function WidgetConfigPanel({ widgetDef, config, onChange, hasLicense }: P
         const isPro = field.tier === "pro";
         const isDisabled = isPro && !hasLicense;
         const currentValue = key in config ? config[key] : field.default;
+        const showCommunityHint =
+          !hasLicense &&
+          !isPro &&
+          field.maxCommunity !== undefined &&
+          field.type === "number";
 
         return (
           <div key={key}>
@@ -97,30 +103,41 @@ export function WidgetConfigPanel({ widgetDef, config, onChange, hasLicense }: P
                 ))}
               </select>
             ) : (
-              <input
-                type={field.type === "number" ? "number" : "text"}
-                value={String(currentValue ?? "")}
-                min={field.min}
-                max={field.max}
-                disabled={isDisabled}
-                onChange={(e) => {
-                  if (isDisabled) return;
-                  const val = field.type === "number" ? Number(e.target.value) : e.target.value;
-                  onChange(key, val);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2) var(--space-3)",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  color: isDisabled ? "var(--color-text-muted)" : "var(--color-text-primary)",
-                  fontSize: "var(--font-size-sm)",
-                  cursor: isDisabled ? "not-allowed" : "text",
-                  opacity: isDisabled ? 0.6 : 1,
-                  boxSizing: "border-box",
-                }}
-              />
+              <>
+                <input
+                  type={field.type === "number" ? "number" : "text"}
+                  value={String(currentValue ?? "")}
+                  min={field.min}
+                  max={field.max}
+                  disabled={isDisabled}
+                  onChange={(e) => {
+                    if (isDisabled) return;
+                    const val = field.type === "number" ? Number(e.target.value) : e.target.value;
+                    onChange(key, val);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-md)",
+                    color: isDisabled ? "var(--color-text-muted)" : "var(--color-text-primary)",
+                    fontSize: "var(--font-size-sm)",
+                    cursor: isDisabled ? "not-allowed" : "text",
+                    opacity: isDisabled ? 0.6 : 1,
+                    boxSizing: "border-box",
+                  }}
+                />
+                {showCommunityHint && (
+                  <div style={{
+                    marginTop: "var(--space-1)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-muted)",
+                  }}>
+                    Community limit: max {field.maxCommunity}. <a href="/settings" style={{ color: "var(--color-primary)" }}>Upgrade to Pro</a> to unlock up to {field.max}.
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
