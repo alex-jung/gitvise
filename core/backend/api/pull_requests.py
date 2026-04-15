@@ -123,6 +123,29 @@ def issues_summary(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/issues/list")
+def issues_list(
+    db: Session = Depends(get_db),
+    limit: int = Query(500, ge=1, le=1000),
+):
+    issues = db.execute(select(Issue).where(Issue.state == "open")).scalars().all()
+    result = [
+        {
+            "repoFullName": i.repo_full_name,
+            "number": i.number,
+            "title": i.title,
+            "author": i.author_login,
+            "labels": i.labels,
+            "ageDays": _age_days(i.created_at),
+            "createdAt": i.created_at.isoformat() if i.created_at else None,
+            "updatedAt": i.updated_at.isoformat() if i.updated_at else None,
+        }
+        for i in issues
+    ]
+    result.sort(key=lambda x: x["ageDays"], reverse=True)
+    return result[:limit]
+
+
 @router.get("/issues/by-label")
 def issues_by_label(
     db: Session = Depends(get_db),
