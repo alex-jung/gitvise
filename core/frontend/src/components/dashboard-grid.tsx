@@ -18,6 +18,10 @@ import { CiStatusSummary } from "@/plugins/ci_cd/widgets/ci-status-summary";
 import { CiFailingWorkflows } from "@/plugins/ci_cd/widgets/ci-failing-workflows";
 import { CiDurationTrend } from "@/plugins/ci_cd/widgets/ci-duration-trend";
 import { CiRunHistory } from "@/plugins/ci_cd/widgets/ci-run-history";
+import { VulnSummary } from "@/plugins/dependencies/widgets/vuln-summary";
+import { SecurityScore } from "@/plugins/dependencies/widgets/security-score";
+import { AffectedRepos } from "@/plugins/dependencies/widgets/affected-repos";
+import { LicenseOverview } from "@/plugins/dependencies/widgets/license-overview";
 import { usePluginRegistry } from "@/context/PluginContext";
 import { WidgetCatalog, type WidgetDef } from "@/components/widget-catalog";
 
@@ -51,6 +55,11 @@ const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
   // repo-health
   "repo-health-score": HealthScoreCard as WidgetComponent,
   "repo-health-table": HealthTable as WidgetComponent,
+  // dependencies
+  "vuln-summary": VulnSummary as WidgetComponent,
+  "security-score": SecurityScore as WidgetComponent,
+  "affected-repos": AffectedRepos as WidgetComponent,
+  "license-overview": LicenseOverview as WidgetComponent,
   // ci-cd
   "ci-status-summary": CiStatusSummary as WidgetComponent,
   "ci-failing-workflows": CiFailingWorkflows as WidgetComponent,
