@@ -96,7 +96,14 @@ async def complete_setup(body: SetupRequest, response: Response, db: Session = D
     _set_config(db, "sync_interval_sec", str(body.sync_interval_sec))
 
     if body.license_key:
-        _set_config(db, "license_key", body.license_key, encrypted=True)
+        from core.license import validate_key, store_validation_result
+        result = await validate_key(body.license_key)
+        if result.get("valid"):
+            _set_config(db, "license_key", body.license_key, encrypted=True)
+            store_validation_result(db, result)
+        # Store the key even on network errors so it can be re-validated later
+        elif result.get("reason") == "network_error":
+            _set_config(db, "license_key", body.license_key, encrypted=True)
 
     _set_config(db, "setup_completed", "true")
     db.commit()
@@ -126,10 +133,13 @@ async def complete_setup(body: SetupRequest, response: Response, db: Session = D
 @router.get("/setup/config")
 async def get_config(db: Session = Depends(get_db)):
     """Return non-sensitive config values for the Settings UI."""
+    from core.license import get_license_status
+    license_status = get_license_status(db)
     return {
         "githubAuthType": _get_config(db, "github_auth_type"),
         "githubOrg": _get_config(db, "github_org"),
         "syncIntervalSec": int(_get_config(db, "sync_interval_sec") or 300),
         "hasLicenseKey": bool(_get_config(db, "license_key")),
+        "licenseStatus": license_status,
         "setupCompleted": _get_config(db, "setup_completed") == "true",
     }

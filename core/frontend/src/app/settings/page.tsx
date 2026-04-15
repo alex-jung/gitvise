@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { useLicense } from "@/context/LicenseContext";
+import { eventBus } from "@/lib/event-bus";
 
 interface Config {
   githubAuthType: string;
@@ -19,10 +21,15 @@ const INTERVALS = [
 ];
 
 export default function SettingsPage() {
+  const { status: licenseStatus, refresh: refreshLicense } = useLicense();
   const [config, setConfig] = useState<Config | null>(null);
   const [syncInterval, setSyncInterval] = useState(300);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [licenseKey, setLicenseKey] = useState("");
+  const [licenseValidating, setLicenseValidating] = useState(false);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [licenseSuccess, setLicenseSuccess] = useState(false);
 
   useEffect(() => {
     apiGet<Config>("/api/core/setup/config")
@@ -48,6 +55,50 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 3000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const activateLicense = async () => {
+    if (!licenseKey.trim()) return;
+    setLicenseValidating(true);
+    setLicenseError(null);
+    setLicenseSuccess(false);
+    try {
+      const result = await apiPost<{ valid: boolean; reason?: string; tier?: string }>(
+        "/api/core/license/validate",
+        { key: licenseKey.trim() }
+      );
+      if (result.valid) {
+        setLicenseSuccess(true);
+        setLicenseKey("");
+        setConfig((c) => c ? { ...c, hasLicenseKey: true } : c);
+        await refreshLicense();
+        eventBus.emit("license:change", result);
+      } else {
+        const messages: Record<string, string> = {
+          expired: "License key has expired.",
+          invalid_signature: "License key is invalid.",
+          not_found: "License key not found.",
+          server_error: "License server error – please try again.",
+          network_error: "Could not reach license server – please check your connection.",
+        };
+        setLicenseError(messages[result.reason ?? ""] ?? "License key could not be validated.");
+      }
+    } catch {
+      setLicenseError("Validation failed – please try again.");
+    } finally {
+      setLicenseValidating(false);
+    }
+  };
+
+  const removeLicense = async () => {
+    try {
+      await apiDelete("/api/core/license");
+      setConfig((c) => c ? { ...c, hasLicenseKey: false } : c);
+      await refreshLicense();
+      eventBus.emit("license:change", { valid: false });
+    } catch {
+      // ignore
     }
   };
 
@@ -90,17 +141,88 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="License">
-          <Field label="License Key">
-            <div style={{ color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
-              {config?.hasLicenseKey ? "✓ Active" : "No license key – Community mode"}
-            </div>
-          </Field>
-          {!config?.hasLicenseKey && (
-            <input
-              type="text"
-              placeholder="gvs_xxxxxxxxxxxxxxxxxxxx"
-              style={{ ...inputStyle, marginTop: "var(--space-2)" }}
-            />
+          {licenseStatus.valid ? (
+            <Field label="Pro License">
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <span style={{ color: "var(--color-success)", fontWeight: 500, fontSize: "var(--font-size-sm)" }}>
+                  ✓ Pro active
+                </span>
+                {licenseStatus.email && (
+                  <span style={{ color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
+                    · {licenseStatus.email}
+                  </span>
+                )}
+                {licenseStatus.expiresAt && (
+                  <span style={{ color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
+                    · expires {new Date(licenseStatus.expiresAt).toLocaleDateString()}
+                  </span>
+                )}
+                {licenseStatus.offline && (
+                  <span style={{ color: "var(--color-warning)", fontSize: "var(--font-size-sm)" }}>
+                    · offline
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={removeLicense}
+                style={{
+                  marginTop: "var(--space-3)",
+                  padding: "var(--space-2) var(--space-4)",
+                  borderRadius: "var(--radius-md)",
+                  background: "transparent",
+                  color: "var(--color-danger)",
+                  border: "1px solid var(--color-danger)",
+                  fontSize: "var(--font-size-sm)",
+                  cursor: "pointer",
+                }}
+              >
+                Remove license key
+              </button>
+            </Field>
+          ) : (
+            <Field label="License Key">
+              <div style={{ color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-3)" }}>
+                {licenseStatus.reason === "validation_expired"
+                  ? "License validation expired – re-enter your key to reactivate."
+                  : "No license key – running in Community mode."}
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <input
+                  type="text"
+                  placeholder="gvs_xxxxxxxxxxxxxxxxxxxx"
+                  value={licenseKey}
+                  onChange={(e) => { setLicenseKey(e.target.value); setLicenseError(null); }}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button
+                  onClick={activateLicense}
+                  disabled={licenseValidating || !licenseKey.trim()}
+                  style={{
+                    padding: "var(--space-3) var(--space-5)",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--color-primary)",
+                    color: "var(--color-text-inverse)",
+                    border: "none",
+                    fontWeight: 500,
+                    cursor: licenseValidating || !licenseKey.trim() ? "not-allowed" : "pointer",
+                    opacity: licenseValidating || !licenseKey.trim() ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {licenseValidating ? "Checking..." : "Activate"}
+                </button>
+              </div>
+              {licenseError && (
+                <div style={{ color: "var(--color-danger)", fontSize: "var(--font-size-sm)", marginTop: "var(--space-2)" }}>
+                  {licenseError}
+                </div>
+              )}
+              {licenseSuccess && (
+                <div style={{ color: "var(--color-success)", fontSize: "var(--font-size-sm)", marginTop: "var(--space-2)" }}>
+                  ✓ Pro license activated.
+                </div>
+              )}
+            </Field>
           )}
         </Section>
 

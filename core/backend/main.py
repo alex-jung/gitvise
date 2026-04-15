@@ -9,6 +9,7 @@ from core.plugin_registry import PluginRegistry
 from core.sync_engine import SyncEngine
 from api.auth import router as auth_router
 from api.dashboard import router as dashboard_router
+from api.license import router as license_router
 from api.setup import router as setup_router
 from api.plugins import router as plugins_router
 from api.sync import router as sync_router
@@ -44,11 +45,48 @@ async def lifespan(app: FastAPI):
     finally:
         _db.close()
 
+    # Start daily license heartbeat loop
+    heartbeat_task = asyncio.create_task(_license_heartbeat_loop())
+
     print(f"[gitvise] Core API ready on port {settings.port}")
     yield
 
     # ── Shutdown ─────────────────────────────────────────────
     await engine.stop()
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
+
+
+_HEARTBEAT_INTERVAL_SECONDS = 24 * 60 * 60  # 24 hours
+
+
+async def _license_heartbeat_loop() -> None:
+    """Send a daily heartbeat to the license server to refresh the cached status."""
+    while True:
+        await asyncio.sleep(_HEARTBEAT_INTERVAL_SECONDS)
+        try:
+            from core.db import SessionLocal
+            from api.setup import _get_config
+            from core.license import validate_key, store_validation_result
+
+            _db = SessionLocal()
+            try:
+                key = _get_config(_db, "license_key")
+                if key:
+                    result = await validate_key(key)
+                    if result.get("valid"):
+                        store_validation_result(_db, result)
+                        _db.commit()
+                        print("[license] Heartbeat: status refreshed")
+                    else:
+                        print(f"[license] Heartbeat: key rejected – {result.get('reason')}")
+            finally:
+                _db.close()
+        except Exception as exc:
+            print(f"[license] Heartbeat error: {exc}")
 
 
 app = FastAPI(
@@ -73,6 +111,7 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/core")
 app.include_router(dashboard_router, prefix="/api/core")
+app.include_router(license_router, prefix="/api/core")
 app.include_router(setup_router, prefix="/api/core")
 app.include_router(plugins_router, prefix="/api/core")
 app.include_router(sync_router, prefix="/api/core")

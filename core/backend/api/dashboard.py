@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from api.setup import _get_config, _set_config
 from core.db import get_db
+from core.license import is_pro
 
 router = APIRouter(tags=["dashboard"])
 
@@ -160,8 +161,8 @@ def _enforce_community_config(widget_def: dict, config: dict, has_license: bool)
 async def save_dashboard(request: Request, db: DBSession = Depends(get_db)):
     body = await request.json()
 
-    # Enforce community config limits: reset Pro fields when no license key
-    has_license = bool(_get_config(db, "license_key"))
+    # Enforce community config limits: reset Pro fields when no valid license
+    has_license = is_pro(db)
     registry = getattr(request.app.state, "plugin_registry", None)
 
     if registry and not has_license:

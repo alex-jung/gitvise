@@ -19,6 +19,19 @@ export async function apiGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.status === 401) {
+    redirect401();
+    throw new Error("Unauthorized");
+  }
+  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",

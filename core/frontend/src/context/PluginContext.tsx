@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
+import { useLicense, type LicenseStatus } from "@/context/LicenseContext";
 import { eventBus } from "@/lib/event-bus";
 
 // ── Types (mirrors @gitvise/plugin-api without requiring the package) ─────────
@@ -40,6 +41,7 @@ export interface PluginAPI {
   notify: ((message: string, type?: ToastType) => void) & ((options: NotifyOptions) => void);
   registerWidget: (config: WidgetConfig) => void;
   on: (event: CoreEvent, handler: (payload?: unknown) => void) => () => void;
+  getLicense: () => LicenseStatus;
 }
 
 interface RemotePlugin {
@@ -99,10 +101,16 @@ async function loadBundle(pluginId: string, api: PluginAPI): Promise<(() => void
 export function PluginProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const router = useRouter();
+  const { status: licenseStatus } = useLicense();
+  const licenseRef = useRef<LicenseStatus>(licenseStatus);
   const [dynamicWidgets, setDynamicWidgets] = useState<Map<string, WidgetComponent>>(
     () => new Map()
   );
   const cleanups = useRef<Array<() => void>>([]);
+
+  // Keep the ref in sync so getLicense() always returns the latest value
+  // without plugins needing to re-subscribe.
+  licenseRef.current = licenseStatus;
 
   useEffect(() => {
     let cancelled = false;
@@ -121,7 +129,7 @@ export function PluginProvider({ children }: { children: React.ReactNode }) {
       for (const p of external) {
         if (cancelled) break;
         try {
-          const api = buildPluginAPI(p.id, notify, router.push, setDynamicWidgets);
+          const api = buildPluginAPI(p.id, notify, router.push, setDynamicWidgets, licenseRef);
           const cleanup = await loadBundle(p.id, api);
           if (typeof cleanup === "function") cleanups.current.push(cleanup);
         } catch (err) {
@@ -151,7 +159,8 @@ function buildPluginAPI(
   pluginId: string,
   notify: (message: string, type?: ToastType, duration?: number) => void,
   navigate: (path: string) => void,
-  setDynamicWidgets: React.Dispatch<React.SetStateAction<Map<string, WidgetComponent>>>
+  setDynamicWidgets: React.Dispatch<React.SetStateAction<Map<string, WidgetComponent>>>,
+  licenseRef: React.RefObject<LicenseStatus>
 ): PluginAPI {
   const notifyFn = (msgOrOptions: string | NotifyOptions, type?: ToastType): void => {
     if (typeof msgOrOptions === "string") {
@@ -187,5 +196,6 @@ function buildPluginAPI(
     notify: notifyFn as PluginAPI["notify"],
     registerWidget,
     on: (event, handler) => eventBus.on(event, handler),
+    getLicense: () => licenseRef.current ?? { valid: false, tier: "community" },
   };
 }

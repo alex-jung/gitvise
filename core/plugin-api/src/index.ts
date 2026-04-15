@@ -105,6 +105,25 @@ export interface PluginManifest {
   };
 }
 
+// ── License ───────────────────────────────────────────────────────────────────
+
+export interface LicenseStatus {
+  valid: boolean;
+  /** "community" | "pro" */
+  tier: string;
+  email?: string;
+  /** ISO-8601 expiry date, if provided by the license server */
+  expiresAt?: string;
+  /** True when status is served from the local cache (no recent server contact) */
+  offline?: boolean;
+  /** Machine-readable reason code when valid=false */
+  reason?: string;
+}
+
+export interface PluginGetLicense {
+  (): LicenseStatus;
+}
+
 // ── Plugin API (passed to activate()) ────────────────────────────────────────
 
 export interface PluginAPI {
@@ -113,6 +132,7 @@ export interface PluginAPI {
   notify: PluginNotify;
   registerWidget: PluginRegisterWidget;
   on: PluginOn;
+  getLicense: PluginGetLicense;
 }
 
 // ── Plugin entry point ────────────────────────────────────────────────────────
