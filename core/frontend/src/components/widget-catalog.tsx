@@ -33,20 +33,21 @@ export function WidgetCatalog({
 }: WidgetCatalogProps) {
   const [query, setQuery] = useState("");
 
-  if (!open) return null;
-
   const activeSet = new Set(activeWidgetIds);
   const q = query.trim().toLowerCase();
 
-  const filtered = q
-    ? allWidgets.filter(
-        (w) =>
-          w.title.toLowerCase().includes(q) ||
-          w.pluginName.toLowerCase().includes(q)
-      )
-    : allWidgets;
+  const filtered = useMemo(
+    () =>
+      q
+        ? allWidgets.filter(
+            (w) =>
+              w.title.toLowerCase().includes(q) ||
+              w.pluginName.toLowerCase().includes(q)
+          )
+        : allWidgets,
+    [allWidgets, q]
+  );
 
-  // Group by plugin
   const groups = useMemo(() => {
     const map = new Map<string, { pluginName: string; widgets: WidgetDef[] }>();
     for (const w of filtered) {
@@ -57,6 +58,8 @@ export function WidgetCatalog({
     }
     return Array.from(map.values());
   }, [filtered]);
+
+  if (!open) return null;
 
   return (
     <>
