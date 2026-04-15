@@ -14,6 +14,10 @@ import { PrsDraftRatio } from "@/plugins/pull_requests/widgets/prs-draft-ratio";
 import { PrsAgeDistribution } from "@/plugins/pull_requests/widgets/prs-age-distribution";
 import { IssuesByLabel } from "@/plugins/pull_requests/widgets/issues-by-label";
 import { PrsStaleTable } from "@/plugins/pull_requests/widgets/prs-stale-table";
+import { TeamContributors } from "@/plugins/team/widgets/team-contributors";
+import { TeamNewContributors } from "@/plugins/team/widgets/team-new-contributors";
+import { TeamCommitActivity } from "@/plugins/team/widgets/team-commit-activity";
+import { TeamActivityHeatmap } from "@/plugins/team/widgets/team-activity-heatmap";
 import { CiStatusSummary } from "@/plugins/ci_cd/widgets/ci-status-summary";
 import { CiFailingWorkflows } from "@/plugins/ci_cd/widgets/ci-failing-workflows";
 import { CiDurationTrend } from "@/plugins/ci_cd/widgets/ci-duration-trend";
@@ -72,6 +76,11 @@ const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
   "prs-age-distribution": PrsAgeDistribution as WidgetComponent,
   "issues-by-label": IssuesByLabel as WidgetComponent,
   "prs-stale-table": PrsStaleTable as WidgetComponent,
+  // team
+  "team-contributors": TeamContributors as WidgetComponent,
+  "team-new-contributors": TeamNewContributors as WidgetComponent,
+  "team-commit-activity": TeamCommitActivity as WidgetComponent,
+  "team-activity-heatmap": TeamActivityHeatmap as WidgetComponent,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

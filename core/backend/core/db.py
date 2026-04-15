@@ -40,6 +40,7 @@ def init_db() -> Engine:
     from models.issue import Issue  # noqa: F401 – registers the model
     from models.workflow_run import WorkflowRun  # noqa: F401 – registers the model
     from models.dependabot_alert import DependabotAlert  # noqa: F401 – registers the model
+    from models.commit import Commit  # noqa: F401 – registers the model
 
     Base.metadata.create_all(_engine)
     _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
