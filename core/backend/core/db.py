@@ -28,10 +28,19 @@ def init_db() -> Engine:
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
+        # Allow up to 10 s of retries when another writer holds the lock
+        # (e.g. background sync running while user saves dashboard config).
+        cursor.execute("PRAGMA busy_timeout=10000")
         cursor.close()
 
     from models.settings import AppConfig  # noqa: F401 – registers the model
     from models.repo import Repository  # noqa: F401 – registers the model
+    from models.session import Session  # noqa: F401 – registers the model
+    from models.pull_request import PullRequest  # noqa: F401 – registers the model
+    from models.issue import Issue  # noqa: F401 – registers the model
+    from models.workflow_run import WorkflowRun  # noqa: F401 – registers the model
+    from models.dependabot_alert import DependabotAlert  # noqa: F401 – registers the model
+    from models.commit import Commit  # noqa: F401 – registers the model
 
     Base.metadata.create_all(_engine)
     _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)

@@ -88,32 +88,6 @@ export function Sidebar() {
         overflow: "hidden",
       }}
     >
-      {/* Logo */}
-      <div
-        style={{
-          padding: "var(--space-4)",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-3)",
-          minHeight: 52,
-        }}
-      >
-        <span style={{ fontSize: 20, flexShrink: 0 }}>◈</span>
-        {!collapsed && (
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: "var(--font-size-lg)",
-              color: "var(--color-text-primary)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Gitvise
-          </span>
-        )}
-      </div>
-
       {/* Navigation */}
       <nav style={{ flex: 1, padding: "var(--space-3) var(--space-2)", overflowY: "auto" }}>
         {allNavItems.map((item) => {
@@ -173,26 +147,6 @@ export function Sidebar() {
             <SyncStatus />
           </div>
         )}
-        <Link
-          href="/settings"
-          onClick={close}
-          title={collapsed ? "Settings" : undefined}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            padding: "var(--space-2) var(--space-3)",
-            borderRadius: "var(--radius-md)",
-            color: "var(--color-sidebar-text)",
-            textDecoration: "none",
-            fontSize: "var(--font-size-md)",
-            justifyContent: collapsed ? "center" : "flex-start",
-          }}
-        >
-          <span style={{ fontSize: 16 }}>⚙</span>
-          {!collapsed && <span>Settings</span>}
-        </Link>
-
         <button
           onClick={toggleCollapse}
           style={{

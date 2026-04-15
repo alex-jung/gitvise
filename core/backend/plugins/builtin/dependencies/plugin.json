@@ -1,0 +1,73 @@
+{
+  "id": "dependencies",
+  "name": "Dependencies & Security",
+  "version": "1.0.0",
+  "tier": "community",
+  "description": "Tracks Dependabot vulnerability alerts and license distribution across all repositories.",
+  "widgets": [
+    {
+      "id": "vuln-summary",
+      "type": "stat-card",
+      "title": "Vulnerabilities",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {}
+    },
+    {
+      "id": "security-score",
+      "type": "gauge",
+      "title": "Security Score",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {}
+    },
+    {
+      "id": "affected-repos",
+      "type": "stat-card",
+      "title": "Affected Repositories",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {}
+    },
+    {
+      "id": "license-overview",
+      "type": "bar-chart",
+      "title": "License Distribution",
+      "defaultSize": "full",
+      "tier": "community",
+      "config": {
+        "max_licenses": {
+          "type": "number",
+          "label": "Max licenses to show",
+          "default": 10,
+          "min": 3,
+          "max": 30
+        }
+      }
+    }
+  ],
+  "defaultDashboard": {
+    "name": "Dependencies & Security",
+    "layout": [
+      { "widgetId": "vuln-summary",     "width": "1/3" },
+      { "widgetId": "security-score",   "width": "1/3" },
+      { "widgetId": "affected-repos",   "width": "1/3" },
+      { "widgetId": "license-overview", "width": "full" }
+    ]
+  },
+  "ui": {
+    "navItem": {
+      "label": "Security",
+      "icon": "⚑",
+      "path": "/dependencies",
+      "order": 4
+    }
+  },
+  "backend": {
+    "syncHooks": ["onSchedule"],
+    "syncModule": "plugins.builtin.dependencies.sync"
+  },
+  "license": {
+    "required": false
+  }
+}

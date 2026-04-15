@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 import httpx
 
+from core.auth import SESSION_COOKIE, SESSION_DURATION_DAYS, create_session
 from core.db import get_db
 from core.crypto import encrypt, decrypt
 from models.settings import AppConfig
@@ -48,9 +49,10 @@ def _set_config(db: Session, key: str, value: str, encrypted: bool = False) -> N
 
 @router.get("/setup/status")
 async def get_setup_status(db: Session = Depends(get_db)):
-    """Returns whether the initial setup has been completed."""
+    """Returns whether the initial setup has been completed and if a password is set."""
     completed = _get_config(db, "setup_completed") == "true"
-    return {"completed": completed}
+    has_password = bool(_get_config(db, "admin_password_hash"))
+    return {"completed": completed, "hasPassword": has_password}
 
 
 @router.post("/setup/test-connection")
@@ -84,7 +86,7 @@ async def test_github_connection(body: TestConnectionRequest):
 
 
 @router.post("/setup")
-async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
+async def complete_setup(body: SetupRequest, response: Response, db: Session = Depends(get_db)):
     """Persist setup configuration and mark setup as completed."""
     # Only update token if a non-empty value is provided (allows settings-page partial save)
     if body.github_token:
@@ -94,10 +96,28 @@ async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
     _set_config(db, "sync_interval_sec", str(body.sync_interval_sec))
 
     if body.license_key:
-        _set_config(db, "license_key", body.license_key, encrypted=True)
+        from core.license import validate_key, store_validation_result
+        result = await validate_key(body.license_key)
+        if result.get("valid"):
+            _set_config(db, "license_key", body.license_key, encrypted=True)
+            store_validation_result(db, result)
+        # Store the key even on network errors so it can be re-validated later
+        elif result.get("reason") == "network_error":
+            _set_config(db, "license_key", body.license_key, encrypted=True)
 
     _set_config(db, "setup_completed", "true")
     db.commit()
+
+    # Create auth session so the user lands on /overview without needing to log in
+    token = create_session(db)
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        httponly=True,
+        samesite="strict",
+        max_age=SESSION_DURATION_DAYS * 86400,
+        secure=False,  # set True behind HTTPS
+    )
 
     # Update sync engine interval and trigger immediate sync
     import asyncio
@@ -113,10 +133,13 @@ async def complete_setup(body: SetupRequest, db: Session = Depends(get_db)):
 @router.get("/setup/config")
 async def get_config(db: Session = Depends(get_db)):
     """Return non-sensitive config values for the Settings UI."""
+    from core.license import get_license_status
+    license_status = get_license_status(db)
     return {
         "githubAuthType": _get_config(db, "github_auth_type"),
         "githubOrg": _get_config(db, "github_org"),
         "syncIntervalSec": int(_get_config(db, "sync_interval_sec") or 300),
         "hasLicenseKey": bool(_get_config(db, "license_key")),
+        "licenseStatus": license_status,
         "setupCompleted": _get_config(db, "setup_completed") == "true",
     }
