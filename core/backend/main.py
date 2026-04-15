@@ -17,6 +17,7 @@ from api.pull_requests import router as pull_requests_router
 from api.ci_cd import router as ci_cd_router
 from api.dependencies import router as dependencies_router
 from api.team import router as team_router
+from api.dev_metrics import router as dev_metrics_router
 
 
 @asynccontextmanager
@@ -80,6 +81,7 @@ app.include_router(pull_requests_router, prefix="/api/core")
 app.include_router(ci_cd_router, prefix="/api/core")
 app.include_router(dependencies_router, prefix="/api/core")
 app.include_router(team_router, prefix="/api/core")
+app.include_router(dev_metrics_router, prefix="/api/core")
 
 
 @app.get("/health")

@@ -18,6 +18,11 @@ import { TeamContributors } from "@/plugins/team/widgets/team-contributors";
 import { TeamNewContributors } from "@/plugins/team/widgets/team-new-contributors";
 import { TeamCommitActivity } from "@/plugins/team/widgets/team-commit-activity";
 import { TeamActivityHeatmap } from "@/plugins/team/widgets/team-activity-heatmap";
+import { DevPrCycleTime } from "@/plugins/developer_metrics/widgets/dev-pr-cycle-time";
+import { DevPrMergeRate } from "@/plugins/developer_metrics/widgets/dev-pr-merge-rate";
+import { DevTopCommitters } from "@/plugins/developer_metrics/widgets/dev-top-committers";
+import { DevCycleTimeTrend } from "@/plugins/developer_metrics/widgets/dev-cycle-time-trend";
+import { DevLeaderboard } from "@/plugins/developer_metrics/widgets/dev-leaderboard";
 import { CiStatusSummary } from "@/plugins/ci_cd/widgets/ci-status-summary";
 import { CiFailingWorkflows } from "@/plugins/ci_cd/widgets/ci-failing-workflows";
 import { CiDurationTrend } from "@/plugins/ci_cd/widgets/ci-duration-trend";
@@ -76,6 +81,12 @@ const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
   "prs-age-distribution": PrsAgeDistribution as WidgetComponent,
   "issues-by-label": IssuesByLabel as WidgetComponent,
   "prs-stale-table": PrsStaleTable as WidgetComponent,
+  // developer-metrics
+  "dev-pr-cycle-time":   DevPrCycleTime as WidgetComponent,
+  "dev-pr-merge-rate":   DevPrMergeRate as WidgetComponent,
+  "dev-top-committers":  DevTopCommitters as WidgetComponent,
+  "dev-cycle-time-trend": DevCycleTimeTrend as WidgetComponent,
+  "dev-leaderboard":     DevLeaderboard as WidgetComponent,
   // team
   "team-contributors": TeamContributors as WidgetComponent,
   "team-new-contributors": TeamNewContributors as WidgetComponent,
