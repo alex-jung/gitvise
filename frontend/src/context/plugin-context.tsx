@@ -9,21 +9,28 @@ import React, {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import type {
-  CoreEvent,
-  ToastType,
-  NotifyOptions,
-  GitvisePlugin,
-} from "@gitvise/plugin-api";
 import { useToast } from "@/context/toast-context";
 import { useLicense, type LicenseStatus } from "@/context/license-context";
 import { eventBus } from "@/lib/event-bus";
 
-// ── Local types ───────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-// WidgetConfig is narrowed vs. @gitvise/plugin-api: external plugins register
-// only id + component here; slot/dataEndpoint from the manifest are unused by
-// the current dynamic loader.
+export type ToastType = "info" | "success" | "warning" | "error";
+
+export interface NotifyOptions {
+  message: string;
+  type?: ToastType;
+  duration?: number;
+  action?: { label: string; onClick: () => void };
+}
+
+export type CoreEvent =
+  | "github:sync:complete"
+  | "github:sync:start"
+  | "github:sync:error"
+  | "setup:complete"
+  | "license:change";
+
 interface WidgetConfig {
   id: string;
   component: () => Promise<{ default: React.ComponentType<{ config: Record<string, unknown> }> }>;
@@ -78,7 +85,7 @@ async function loadBundle(pluginId: string, api: PluginAPI): Promise<(() => void
   try {
     // webpackIgnore keeps bundler from trying to statically resolve runtime URLs
     const mod = await import(/* webpackIgnore: true */ blobUrl);
-    const plugin: RemotePlugin = mod.default ?? mod;
+    const plugin: { activate: (api: PluginAPI) => void | (() => void) } = mod.default ?? mod;
     if (typeof plugin?.activate !== "function") {
       throw new Error(`Plugin "${pluginId}" does not export a valid activate() function`);
     }
