@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
-import { useToast } from "@/context/ToastContext";
-import { useLicense } from "@/context/LicenseContext";
+import { useToast } from "@/context/toast-context";
+import { useLicense } from "@/context/license-context";
 import { eventBus } from "@/lib/event-bus";
 import { log } from "@/lib/log";
 import { Modal } from "@/components/ui/modal";

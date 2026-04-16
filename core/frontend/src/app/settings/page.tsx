@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
-import { useLicense } from "@/context/LicenseContext";
+import { useLicense } from "@/context/license-context";
 import { eventBus } from "@/lib/event-bus";
 
 interface Config {

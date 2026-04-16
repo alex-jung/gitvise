@@ -1,6 +1,6 @@
 "use client";
 
-import { useToast, type Toast } from "@/context/ToastContext";
+import { useToast, type Toast } from "@/context/toast-context";
 
 const ICON: Record<Toast["type"], string> = {
   info: "ℹ",

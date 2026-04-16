@@ -9,32 +9,28 @@ import React, {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/context/ToastContext";
-import { useLicense, type LicenseStatus } from "@/context/LicenseContext";
+import type {
+  CoreEvent,
+  ToastType,
+  NotifyOptions,
+  GitvisePlugin,
+} from "@gitvise/plugin-api";
+import { useToast } from "@/context/toast-context";
+import { useLicense, type LicenseStatus } from "@/context/license-context";
 import { eventBus } from "@/lib/event-bus";
 
-// ── Types (mirrors @gitvise/plugin-api without requiring the package) ─────────
+// ── Local types ───────────────────────────────────────────────────────────────
 
-type CoreEvent =
-  | "github:sync:complete"
-  | "github:sync:start"
-  | "github:sync:error"
-  | "setup:complete"
-  | "license:change";
-
-type ToastType = "info" | "success" | "warning" | "error";
-
-interface NotifyOptions {
-  message: string;
-  type?: ToastType;
-  duration?: number;
-}
-
+// WidgetConfig is narrowed vs. @gitvise/plugin-api: external plugins register
+// only id + component here; slot/dataEndpoint from the manifest are unused by
+// the current dynamic loader.
 interface WidgetConfig {
   id: string;
   component: () => Promise<{ default: React.ComponentType<{ config: Record<string, unknown> }> }>;
 }
 
+// PluginAPI is kept local so getLicense() can return the richer frontend
+// LicenseStatus (which adds hasKey) without widening the plugin-api contract.
 export interface PluginAPI {
   fetch: <T = unknown>(endpoint: string, options?: RequestInit) => Promise<T>;
   navigate: (path: string) => void;
@@ -42,10 +38,6 @@ export interface PluginAPI {
   registerWidget: (config: WidgetConfig) => void;
   on: (event: CoreEvent, handler: (payload?: unknown) => void) => () => void;
   getLicense: () => LicenseStatus;
-}
-
-interface RemotePlugin {
-  activate(api: PluginAPI): void | (() => void);
 }
 
 interface PluginEntry {
