@@ -1,12 +1,11 @@
-"""Plugin Registry – scans /plugins/builtin and /plugins/external for plugin.json manifests."""
+"""Plugin Registry – scans /plugins for plugin.json manifests."""
 import json
 import os
 from dataclasses import dataclass, field
 from typing import Any
 
 
-BUILTIN_PLUGINS_DIR = os.getenv("PLUGINS_BUILTIN_DIR", "/app/plugins/builtin")
-EXTERNAL_PLUGINS_DIR = os.getenv("PLUGINS_EXTERNAL_DIR", "/app/plugins/external")
+PLUGINS_DIR = os.getenv("PLUGINS_DIR", "/app/plugins")
 
 
 @dataclass
@@ -61,7 +60,7 @@ class PluginRegistry:
     def scan(self) -> None:
         """Scan plugin directories and register manifests. Called at startup."""
         self._plugins.clear()
-        for directory in (BUILTIN_PLUGINS_DIR, EXTERNAL_PLUGINS_DIR):
+        for directory in (PLUGINS_DIR,):
             if not os.path.isdir(directory):
                 continue
             for plugin_dir in os.scandir(directory):

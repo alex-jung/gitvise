@@ -65,7 +65,7 @@ class SyncEngine:
         sync_module = (
             plugin.sync_module
             if hasattr(plugin, "sync_module") and plugin.sync_module
-            else f"plugins.builtin.{plugin.id.replace('-', '_')}.sync"
+            else f"plugins.{plugin.id.replace('-', '_')}.sync"
         )
         print(f"[sync-engine] Syncing plugin: {plugin.id} via {sync_module}")
         try:

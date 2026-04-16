@@ -82,7 +82,7 @@
   },
   "backend": {
     "syncHooks": ["onSchedule"],
-    "syncModule": "plugins.builtin.dependencies.sync"
+    "syncModule": "plugins.dependencies.sync"
   },
   "license": {
     "required": false

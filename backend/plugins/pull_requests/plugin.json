@@ -106,7 +106,7 @@
   },
   "backend": {
     "syncHooks": ["onSchedule"],
-    "syncModule": "plugins.builtin.pull_requests.sync"
+    "syncModule": "plugins.pull_requests.sync"
   },
   "license": {
     "required": false

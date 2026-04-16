@@ -136,7 +136,7 @@
   },
   "backend": {
     "syncHooks": ["onSchedule"],
-    "syncModule": "plugins.builtin.developer_metrics.sync"
+    "syncModule": "plugins.developer_metrics.sync"
   },
   "license": {
     "required": false

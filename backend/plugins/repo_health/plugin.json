@@ -83,7 +83,7 @@
   },
   "backend": {
     "syncHooks": ["onSchedule"],
-    "syncModule": "plugins.builtin.repo_health.sync"
+    "syncModule": "plugins.repo_health.sync"
   },
   "license": {
     "required": false

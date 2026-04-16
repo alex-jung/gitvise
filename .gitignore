@@ -18,7 +18,7 @@ __pycache__/
 *.pyo
 .venv/
 venv/
-core/backend/.venv/
+backend/.venv/
 
 # Env
 .env

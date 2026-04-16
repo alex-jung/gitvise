@@ -110,7 +110,7 @@
   },
   "backend": {
     "syncHooks": ["onSchedule"],
-    "syncModule": "plugins.builtin.ci_cd.sync"
+    "syncModule": "plugins.ci_cd.sync"
   },
   "license": {
     "required": false
