@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { ProLock } from "@/components/ui/pro-lock";
@@ -32,7 +32,6 @@ import { SecurityScore } from "@/plugins/dependencies/widgets/security-score";
 import { AffectedRepos } from "@/plugins/dependencies/widgets/affected-repos";
 import { LicenseOverview } from "@/plugins/dependencies/widgets/license-overview";
 import { AlertStatus } from "@/plugins/alerts/widgets/alert-status";
-import { usePluginRegistry } from "@/context/plugin-context";
 import { WidgetCatalog, type WidgetDef } from "@/components/widget-catalog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -403,12 +402,7 @@ export function DashboardGrid() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragCounter = useRef(0);
 
-  const { dynamicWidgets } = usePluginRegistry();
-
-  const widgetRegistry = useMemo<Record<string, WidgetComponent>>(
-    () => ({ ...BUILTIN_WIDGETS, ...Object.fromEntries(dynamicWidgets) }),
-    [dynamicWidgets]
-  );
+  const widgetRegistry = BUILTIN_WIDGETS;
 
   useEffect(() => {
     Promise.all([

@@ -15,7 +15,6 @@ class PluginManifest:
     version: str
     tier: str  # community | pro
     description: str
-    plugin_dir: str = ""   # absolute path to the directory containing plugin.json
     nav_item: dict[str, Any] = field(default_factory=dict)
     widgets: list[dict] = field(default_factory=list)        # full widget defs with config schema
     default_dashboard: dict = field(default_factory=dict)    # optional per-plugin default layout
@@ -24,14 +23,6 @@ class PluginManifest:
     sync_module: str = ""
     requires_license: bool = False
 
-    @property
-    def bundle_path(self) -> str | None:
-        """Absolute path to dist/bundle.js, or None if no bundle exists."""
-        if not self.plugin_dir:
-            return None
-        path = os.path.join(self.plugin_dir, "dist", "bundle.js")
-        return path if os.path.isfile(path) else None
-
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -39,7 +30,6 @@ class PluginManifest:
             "version": self.version,
             "tier": self.tier,
             "description": self.description,
-            "hasBundle": self.bundle_path is not None,
             "widgets": self.widgets,
             "defaultDashboard": self.default_dashboard,
             "ui": {
@@ -89,7 +79,6 @@ class PluginRegistry:
             version=data["version"],
             tier=data.get("tier", "community"),
             description=data.get("description", ""),
-            plugin_dir=os.path.dirname(os.path.abspath(path)),
             nav_item=ui.get("navItem", {}),
             widgets=data.get("widgets", []),
             default_dashboard=data.get("defaultDashboard", {}),

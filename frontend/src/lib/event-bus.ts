@@ -1,12 +1,6 @@
 // Singleton EventBus for core events.
-// Core emits via eventBus.emit(); plugins subscribe via api.on().
 
-type CoreEvent =
-  | "github:sync:complete"
-  | "github:sync:start"
-  | "github:sync:error"
-  | "setup:complete"
-  | "license:change";
+type CoreEvent = "license:change";
 
 type Handler = (payload?: unknown) => void;
 export type Unsubscribe = () => void;
