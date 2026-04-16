@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.helpers import as_utc, cutoff
 from api.setup import _get_config, _set_config
 from core.db import get_db
 from models.dependabot_alert import DependabotAlert
@@ -22,18 +23,6 @@ from models.repo import Repository
 router = APIRouter(tags=["alerts"])
 
 _SETTINGS_KEY = "plugin_settings_alerts"
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _as_utc(dt: datetime | None) -> datetime | None:
-    if dt is None:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-
-def _cutoff(days: int) -> datetime:
-    return datetime.now(timezone.utc) - timedelta(days=days)
 
 
 def _load_settings(db: Session) -> dict:
@@ -71,36 +60,36 @@ def alerts_summary(db: Session = Depends(get_db)):
 
     # Stale repos
     repos = db.execute(select(Repository)).scalars().all()
-    stale_cutoff = _cutoff(stale_days)
+    stale_cutoff = cutoff(stale_days)
     stale_repos = sum(
         1 for r in repos
         if not r.archived
         and (
             r.pushed_at is None
-            or _as_utc(r.pushed_at) < stale_cutoff
+            or as_utc(r.pushed_at) < stale_cutoff
         )
     )
 
     # Failing CI workflows (last 7 days, any failure)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
-    ci_cutoff = _cutoff(7)
+    ci_cutoff = cutoff(7)
     failing_workflows: set[str] = set()
     for r in all_runs:
         if (
             r.conclusion == "failure"
             and r.created_at
-            and _as_utc(r.created_at) >= ci_cutoff
+            and as_utc(r.created_at) >= ci_cutoff
         ):
             failing_workflows.add(f"{r.repo_full_name}/{r.workflow_name}")
 
     # Stale PRs
     all_prs = db.execute(select(PullRequest)).scalars().all()
-    pr_cutoff = _cutoff(pr_stale_days)
+    pr_cutoff = cutoff(pr_stale_days)
     stale_prs = sum(
         1 for p in all_prs
         if p.state == "open"
         and p.created_at
-        and _as_utc(p.created_at) < pr_cutoff
+        and as_utc(p.created_at) < pr_cutoff
     )
 
     total = critical_vulns + stale_repos + len(failing_workflows) + stale_prs

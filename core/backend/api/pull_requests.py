@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.helpers import as_utc
 from core.db import get_db
 from models.pull_request import PullRequest
 from models.issue import Issue
@@ -13,16 +14,10 @@ from models.issue import Issue
 router = APIRouter(tags=["pull-requests"])
 
 
-def _as_utc(dt: datetime | None) -> datetime | None:
-    if dt is None:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-
 def _age_days(created_at: datetime | None) -> int:
     if not created_at:
         return 0
-    return (datetime.now(timezone.utc) - _as_utc(created_at)).days
+    return (datetime.now(timezone.utc) - as_utc(created_at)).days
 
 
 def _pr_to_dict(pr: PullRequest) -> dict:
@@ -59,7 +54,7 @@ def prs_summary(db: Session = Depends(get_db)):
     avg_age = round(sum(ages) / len(ages)) if ages else 0
     drafts = sum(1 for pr in prs if pr.is_draft)
     stale = sum(1 for pr in prs if _age_days(pr.created_at) >= 7)
-    last_sync = max((_as_utc(pr.synced_at) for pr in prs if pr.synced_at), default=None)
+    last_sync = max((as_utc(pr.synced_at) for pr in prs if pr.synced_at), default=None)
 
     return {
         "open": len(prs),
@@ -114,7 +109,7 @@ def issues_summary(db: Session = Depends(get_db)):
 
     ages = [_age_days(i.created_at) for i in issues]
     avg_age = round(sum(ages) / len(ages)) if ages else 0
-    last_sync = max((_as_utc(i.synced_at) for i in issues if i.synced_at), default=None)
+    last_sync = max((as_utc(i.synced_at) for i in issues if i.synced_at), default=None)
 
     return {
         "open": len(issues),

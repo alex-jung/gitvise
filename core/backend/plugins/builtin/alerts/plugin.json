@@ -51,7 +51,7 @@
   },
   "backend": {
     "syncHooks": [],
-    "syncModule": ""
+    "syncModule": null
   },
   "license": {
     "required": false

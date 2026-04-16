@@ -6,28 +6,18 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.helpers import as_utc, cutoff
+from core.config import COMMUNITY_MAX_DAYS
 from core.db import get_db
 from core.license import is_pro
 from models.workflow_run import WorkflowRun
 
-_COMMUNITY_MAX_DAYS = 90
-
 router = APIRouter(tags=["ci-cd"])
 
 
-def _as_utc(dt: datetime | None) -> datetime | None:
-    if dt is None:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-
-def _cutoff(days: int) -> datetime:
-    return datetime.now(timezone.utc) - timedelta(days=days)
-
-
 def _recent(runs: list[WorkflowRun], days: int) -> list[WorkflowRun]:
-    cut = _cutoff(days)
-    return [r for r in runs if r.created_at and _as_utc(r.created_at) >= cut]
+    cut = cutoff(days)
+    return [r for r in runs if r.created_at and as_utc(r.created_at) >= cut]
 
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -35,7 +25,7 @@ def _recent(runs: list[WorkflowRun], days: int) -> list[WorkflowRun]:
 @router.get("/ci/summary")
 def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -50,7 +40,7 @@ def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)
     durations = [r.duration_seconds for r in completed if r.duration_seconds is not None]
     avg_duration = round(sum(durations) / len(durations)) if durations else 0
 
-    last_sync = max((_as_utc(r.synced_at) for r in all_runs if r.synced_at), default=None)
+    last_sync = max((as_utc(r.synced_at) for r in all_runs if r.synced_at), default=None)
 
     return {
         "total": len(runs),
@@ -69,7 +59,7 @@ def ci_summary(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)
 @router.get("/ci/failing")
 def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -91,7 +81,7 @@ def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)
         if r.conclusion == "failure":
             g["failures"] += 1
         # Track most recent
-        run_ts = _as_utc(r.created_at)
+        run_ts = as_utc(r.created_at)
         if run_ts and (g["lastRunAt"] is None or run_ts.isoformat() > g["lastRunAt"]):
             g["lastRunAt"] = run_ts.isoformat()
             g["lastConclusion"] = r.conclusion
@@ -107,7 +97,7 @@ def ci_failing(db: Session = Depends(get_db), days: int = Query(7, ge=1, le=365)
 @router.get("/ci/duration-trend")
 def ci_duration_trend(db: Session = Depends(get_db), days: int = Query(14, ge=7, le=365)):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
 
@@ -115,7 +105,7 @@ def ci_duration_trend(db: Session = Depends(get_db), days: int = Query(14, ge=7,
     by_day: dict[str, list[int]] = defaultdict(list)
     for r in runs:
         if r.status == "completed" and r.duration_seconds is not None and r.created_at:
-            day = _as_utc(r.created_at).strftime("%m-%d")
+            day = as_utc(r.created_at).strftime("%m-%d")
             by_day[day].append(r.duration_seconds)
 
     # Build a full date range so the chart has no gaps
@@ -139,7 +129,7 @@ def ci_runs(
     limit: int = Query(100, ge=1, le=500),
 ):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_runs = db.execute(select(WorkflowRun)).scalars().all()
     runs = _recent(all_runs, days)
     runs.sort(key=lambda r: (r.created_at or datetime.min).isoformat(), reverse=True)

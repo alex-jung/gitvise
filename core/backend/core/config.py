@@ -19,3 +19,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# ── Community tier limits ─────────────────────────────────────────────────────
+# Maximum query window for Community users (Pro users have no cap).
+COMMUNITY_MAX_DAYS: int = 90
+COMMUNITY_MAX_WEEKS: int = 52

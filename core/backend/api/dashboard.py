@@ -139,11 +139,30 @@ async def get_dashboard(request: Request, db: DBSession = Depends(get_db)):
     raw = _get_config(db, DASHBOARD_CONFIG_KEY)
     if raw:
         try:
-            return json.loads(raw)
+            data = json.loads(raw)
         except json.JSONDecodeError:
-            pass
-    # First call: return generated default (but don't persist yet)
-    return _default_dashboard(request)
+            data = _default_dashboard(request)
+    else:
+        # First call: return generated default (but don't persist yet)
+        data = _default_dashboard(request)
+
+    # Enforce community limits on read so a license downgrade takes effect immediately.
+    has_license = is_pro(db)
+    if not has_license:
+        registry = getattr(request.app.state, "plugin_registry", None)
+        if registry:
+            widget_map: dict[str, dict] = {
+                w["id"]: w
+                for plugin in registry.all()
+                for w in plugin.widgets
+            }
+            for dashboard in data.get("dashboards", []):
+                for item in dashboard.get("layout", []):
+                    widget_def = widget_map.get(item.get("widgetId", ""), {})
+                    if widget_def:
+                        item["config"] = _enforce_community_config(widget_def, item.get("config", {}), False)
+
+    return data
 
 
 def _enforce_community_config(widget_def: dict, config: dict, has_license: bool) -> dict:

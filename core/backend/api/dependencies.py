@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.helpers import as_utc
 from core.db import get_db
 from models.dependabot_alert import DependabotAlert
 from models.repo import Repository
@@ -37,13 +38,8 @@ def deps_summary(db: Session = Depends(get_db)):
     affected = len(set(a.repo_full_name for a in alerts))
     score = _security_score(critical, high, medium, low)
 
-    last_sync = None
-    if alerts:
-        import datetime
-        synced_ts = [a.synced_at for a in alerts if a.synced_at]
-        if synced_ts:
-            latest = max(synced_ts)
-            last_sync = (latest if latest.tzinfo else latest.replace(tzinfo=datetime.timezone.utc)).isoformat()
+    last_sync_dt = max((as_utc(a.synced_at) for a in alerts if a.synced_at), default=None)
+    last_sync = last_sync_dt.isoformat() if last_sync_dt else None
 
     return {
         "total": len(alerts),

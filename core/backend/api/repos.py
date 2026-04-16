@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from api.helpers import as_utc
 from core.db import get_db
 from models.repo import Repository
 
@@ -12,16 +13,9 @@ FILTER_VALUES = ["all", "stale", "critical", "unprotected", "archived"]
 SORT_VALUES = ["health_asc", "health_desc", "name", "pushed_at"]
 
 
-def _as_utc(dt: datetime | None) -> datetime | None:
-    """Ensure datetime is timezone-aware (SQLite strips tzinfo on read-back)."""
-    if dt is None:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-
 def _repo_to_dict(r: Repository) -> dict:
     days_since_push = None
-    pushed_at = _as_utc(r.pushed_at)
+    pushed_at = as_utc(r.pushed_at)
     if pushed_at:
         days_since_push = (datetime.now(timezone.utc) - pushed_at).days
     return {
@@ -96,11 +90,11 @@ def repos_summary(db: Session = Depends(get_db)):
     critical = sum(1 for r in rows if r.health_score < 40)
     stale = sum(
         1 for r in rows
-        if r.pushed_at and (now - _as_utc(r.pushed_at)).days > 30 and not r.is_archived
+        if r.pushed_at and (now - as_utc(r.pushed_at)).days > 30 and not r.is_archived
     )
     unprotected = sum(1 for r in rows if not r.has_branch_protection and not r.is_archived)
     avg_score = round(sum(r.health_score for r in rows) / len(rows))
-    last_sync = max((_as_utc(r.synced_at) for r in rows if r.synced_at), default=None)
+    last_sync = max((as_utc(r.synced_at) for r in rows if r.synced_at), default=None)
 
     attention = sorted(
         [_repo_to_dict(r) for r in rows if r.health_score < 70],

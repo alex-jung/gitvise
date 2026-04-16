@@ -6,41 +6,22 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.helpers import as_utc, cutoff, is_bot
+from core.config import COMMUNITY_MAX_DAYS, COMMUNITY_MAX_WEEKS
 from core.db import get_db
 from core.license import is_pro
 from models.commit import Commit
 
-_COMMUNITY_MAX_DAYS = 90
-_COMMUNITY_MAX_WEEKS = 26
-
 router = APIRouter(tags=["team"])
-
-BOT_SUFFIXES = ("[bot]", "-bot", "_bot")
-
-
-def _is_bot(login: str | None) -> bool:
-    if not login:
-        return False
-    return any(login.endswith(s) for s in BOT_SUFFIXES)
-
-
-def _as_utc(dt: datetime | None) -> datetime | None:
-    if dt is None:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-
-def _cutoff(days: int) -> datetime:
-    return datetime.now(timezone.utc) - timedelta(days=days)
 
 
 def _filter(commits: list[Commit], days: int, exclude_bots: bool) -> list[Commit]:
-    cut = _cutoff(days)
+    cut = cutoff(days)
     result = []
     for c in commits:
-        if c.committed_at and _as_utc(c.committed_at) < cut:
+        if c.committed_at and as_utc(c.committed_at) < cut:
             continue
-        if exclude_bots and _is_bot(c.author_login):
+        if exclude_bots and is_bot(c.author_login):
             continue
         result.append(c)
     return result
@@ -55,26 +36,26 @@ def team_summary(
     exclude_bots: bool = Query(True),
 ):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
     active_logins = {c.author_login for c in commits if c.author_login}
 
     # New contributors: first commit in the entire history (all_commits) is within window
-    cutoff = _cutoff(days)
+    cutoff = cutoff(days)
     first_commit: dict[str, datetime] = {}
     for c in all_commits:
-        if not c.author_login or (_is_bot(c.author_login) and exclude_bots):
+        if not c.author_login or (is_bot(c.author_login) and exclude_bots):
             continue
-        ts = _as_utc(c.committed_at)
+        ts = as_utc(c.committed_at)
         if ts and (c.author_login not in first_commit or ts < first_commit[c.author_login]):
             first_commit[c.author_login] = ts
 
     new_contributors = sum(1 for ts in first_commit.values() if ts >= cutoff)
     avg_per_day = round(len(commits) / days) if days > 0 else 0
 
-    last_sync = max((_as_utc(c.synced_at) for c in all_commits if c.synced_at), default=None)
+    last_sync = max((as_utc(c.synced_at) for c in all_commits if c.synced_at), default=None)
 
     return {
         "activeContributors": len(active_logins),
@@ -95,7 +76,7 @@ def team_contributors(
     limit: int = Query(20, ge=1, le=100),
 ):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
@@ -108,13 +89,13 @@ def team_contributors(
             display_name[key] = c.author_name or key
 
     # First-commit date for all-time history
-    cutoff = _cutoff(days)
+    cutoff = cutoff(days)
     first_commit: dict[str, datetime] = {}
     for c in all_commits:
         key = c.author_login or c.author_name or "unknown"
-        if _is_bot(c.author_login) and exclude_bots:
+        if is_bot(c.author_login) and exclude_bots:
             continue
-        ts = _as_utc(c.committed_at)
+        ts = as_utc(c.committed_at)
         if ts and (key not in first_commit or ts < first_commit[key]):
             first_commit[key] = ts
 
@@ -141,14 +122,14 @@ def team_commit_activity(
     exclude_bots: bool = Query(True),
 ):
     if not is_pro(db):
-        days = min(days, _COMMUNITY_MAX_DAYS)
+        days = min(days, COMMUNITY_MAX_DAYS)
     all_commits = db.execute(select(Commit)).scalars().all()
     commits = _filter(all_commits, days, exclude_bots)
 
     by_day: Counter = Counter()
     for c in commits:
         if c.committed_at:
-            day = _as_utc(c.committed_at).strftime("%m-%d")
+            day = as_utc(c.committed_at).strftime("%m-%d")
             by_day[day] += 1
 
     now = datetime.now(timezone.utc)
@@ -168,7 +149,7 @@ def team_heatmap(
     exclude_bots: bool = Query(True),
 ):
     if not is_pro(db):
-        weeks = min(weeks, _COMMUNITY_MAX_WEEKS)
+        weeks = min(weeks, COMMUNITY_MAX_WEEKS)
     """
     Returns a 7-row × weeks-col matrix of commit counts.
     Row 0 = Monday, row 6 = Sunday.
@@ -192,7 +173,7 @@ def team_heatmap(
         col_labels.append(ws.strftime("%m-%d"))
 
     for c in commits:
-        ts = _as_utc(c.committed_at)
+        ts = as_utc(c.committed_at)
         if not ts:
             continue
         delta = ts.replace(tzinfo=timezone.utc) - week_start.replace(tzinfo=timezone.utc)
