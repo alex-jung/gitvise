@@ -1,0 +1,144 @@
+{
+  "id": "developer-metrics",
+  "name": "Developer Metrics",
+  "version": "1.0.0",
+  "tier": "community",
+  "description": "Per-developer productivity metrics: PR cycle time, merge rate, commit frequency and leaderboard.",
+  "widgets": [
+    {
+      "id": "dev-pr-cycle-time",
+      "type": "stat-card",
+      "title": "Avg PR Cycle Time",
+      "description": "Average time from PR open to merge across all developers in the selected window.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        }
+      }
+    },
+    {
+      "id": "dev-pr-merge-rate",
+      "type": "stat-card",
+      "title": "PR Merge Rate",
+      "description": "Percentage of closed PRs that were merged (vs. abandoned). Higher is healthier.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        }
+      }
+    },
+    {
+      "id": "dev-top-committers",
+      "type": "bar-chart",
+      "title": "Top Committers",
+      "description": "Horizontal bar chart ranking contributors by commit count in the selected window.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        },
+        "limit": {
+          "type": "number",
+          "label": "Contributors to show",
+          "default": 8,
+          "min": 3,
+          "max": 20
+        }
+      }
+    },
+    {
+      "id": "dev-cycle-time-trend",
+      "type": "line-chart",
+      "title": "PR Cycle Time Trend",
+      "description": "Weekly average PR cycle time over time. Identify process improvements or regressions.",
+      "defaultSize": "2/3",
+      "tier": "community",
+      "config": {
+        "weeks": {
+          "type": "number",
+          "label": "Weeks to show",
+          "default": 8,
+          "min": 4,
+          "max": 52,
+          "maxCommunity": 12
+        },
+        "team_comparison": {
+          "type": "boolean",
+          "label": "Compare teams / sub-groups",
+          "default": false,
+          "tier": "pro"
+        }
+      }
+    },
+    {
+      "id": "dev-leaderboard",
+      "type": "table",
+      "title": "Developer Leaderboard",
+      "description": "Ranked table of all contributors: commits, PRs opened/merged and average cycle time.",
+      "defaultSize": "full",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        },
+        "limit": {
+          "type": "number",
+          "label": "Rows to show",
+          "default": 20,
+          "min": 5,
+          "max": 100
+        }
+      }
+    }
+  ],
+  "defaultDashboard": {
+    "name": "Developer Metrics",
+    "layout": [
+      { "widgetId": "dev-pr-cycle-time",   "width": "1/3" },
+      { "widgetId": "dev-pr-merge-rate",   "width": "1/3" },
+      { "widgetId": "dev-top-committers",  "width": "1/3" },
+      { "widgetId": "dev-cycle-time-trend","width": "2/3" },
+      { "widgetId": "dev-leaderboard",     "width": "full" }
+    ]
+  },
+  "ui": {
+    "navItem": {
+      "label": "Dev Metrics",
+      "icon": "⚡",
+      "path": "/dev-metrics",
+      "order": 6
+    }
+  },
+  "backend": {
+    "syncHooks": ["onSchedule"],
+    "syncModule": "plugins.developer_metrics.sync"
+  },
+  "license": {
+    "required": false
+  }
+}

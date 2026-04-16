@@ -2,8 +2,6 @@
   "name": "gitvise",
   "private": true,
   "workspaces": [
-    "core/frontend",
-    "core/plugin-api",
-    "packages/ui"
+    "frontend"
   ]
 }

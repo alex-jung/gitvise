@@ -1,0 +1,205 @@
+"""Developer Metrics API."""
+from collections import Counter, defaultdict
+from datetime import datetime, timezone, timedelta
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.helpers import as_utc, cutoff, is_bot
+from core.config import COMMUNITY_MAX_DAYS, COMMUNITY_MAX_WEEKS
+from core.db import get_db
+from core.license import is_pro
+from models.commit import Commit
+from models.pull_request import PullRequest
+
+router = APIRouter(tags=["developer-metrics"])
+
+
+def _cycle_hours(pr: PullRequest) -> float | None:
+    """Hours from PR creation to merge. Returns None if not merged or no timestamps."""
+    created = as_utc(pr.created_at)
+    merged = as_utc(pr.merged_at)
+    if created is None or merged is None:
+        return None
+    delta = merged - created
+    if delta.total_seconds() < 0:
+        return None
+    return delta.total_seconds() / 3600
+
+
+def _merged_prs_in_window(prs: list[PullRequest], days: int) -> list[PullRequest]:
+    cut = cutoff(days)
+    return [
+        p for p in prs
+        if p.state == "merged"
+        and as_utc(p.merged_at) is not None
+        and as_utc(p.merged_at) >= cut  # type: ignore[operator]
+    ]
+
+
+def _closed_prs_in_window(prs: list[PullRequest], days: int) -> list[PullRequest]:
+    """Merged + non-merged closed PRs within window (for merge rate denominator)."""
+    cut = cutoff(days)
+    result = []
+    for p in prs:
+        if p.state not in ("merged", "closed"):
+            continue
+        ref = as_utc(p.merged_at) or as_utc(p.closed_at)
+        if ref and ref >= cut:
+            result.append(p)
+    return result
+
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+
+@router.get("/dev/summary")
+def dev_summary(
+    db: Session = Depends(get_db),
+    days: int = Query(30, ge=7, le=365),
+):
+    if not is_pro(db):
+        days = min(days, COMMUNITY_MAX_DAYS)
+    all_prs = db.execute(select(PullRequest)).scalars().all()
+    all_commits = db.execute(select(Commit)).scalars().all()
+
+    merged = _merged_prs_in_window(all_prs, days)
+    closed = _closed_prs_in_window(all_prs, days)
+
+    # Avg cycle time
+    cycle_times = [h for p in merged if (h := _cycle_hours(p)) is not None]
+    avg_cycle_hours = round(sum(cycle_times) / len(cycle_times), 1) if cycle_times else None
+
+    # Merge rate
+    merge_rate = round(len(merged) / len(closed) * 100) if closed else None
+
+    # Top committer (within window)
+    cut = cutoff(days)
+    commit_counter: Counter = Counter()
+    for c in all_commits:
+        if as_utc(c.committed_at) and as_utc(c.committed_at) >= cut and not is_bot(c.author_login):  # type: ignore[operator]
+            key = c.author_login or c.author_name or "unknown"
+            commit_counter[key] += 1
+    top_committer = commit_counter.most_common(1)[0][0] if commit_counter else None
+
+    return {
+        "avgCycleTimeHours": avg_cycle_hours,
+        "mergeRate": merge_rate,
+        "totalMerged": len(merged),
+        "totalClosed": len(closed),
+        "topCommitter": top_committer,
+    }
+
+
+# ── Cycle-time trend (per week) ───────────────────────────────────────────────
+
+@router.get("/dev/cycle-time-trend")
+def dev_cycle_time_trend(
+    db: Session = Depends(get_db),
+    weeks: int = Query(8, ge=4, le=52),
+):
+    if not is_pro(db):
+        weeks = min(weeks, COMMUNITY_MAX_WEEKS)
+    all_prs = db.execute(select(PullRequest)).scalars().all()
+
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    days_since_monday = today.weekday()
+    this_monday = today - timedelta(days=days_since_monday)
+    week_start = this_monday - timedelta(weeks=weeks - 1)
+
+    # Bucket merged PRs by the week they were merged
+    buckets: dict[int, list[float]] = defaultdict(list)
+    for pr in all_prs:
+        if pr.state != "merged":
+            continue
+        merged = as_utc(pr.merged_at)
+        if merged is None or merged < week_start:
+            continue
+        hours = _cycle_hours(pr)
+        if hours is None:
+            continue
+        delta = merged - week_start.replace(tzinfo=timezone.utc)
+        week_idx = min(delta.days // 7, weeks - 1)
+        buckets[week_idx].append(hours)
+
+    result = []
+    for w in range(weeks):
+        ws = week_start + timedelta(weeks=w)
+        label = ws.strftime("%m-%d")
+        vals = buckets.get(w, [])
+        avg = round(sum(vals) / len(vals), 1) if vals else None
+        result.append({"week": label, "avgHours": avg})
+    return result
+
+
+# ── Developer leaderboard ─────────────────────────────────────────────────────
+
+@router.get("/dev/leaderboard")
+def dev_leaderboard(
+    db: Session = Depends(get_db),
+    days: int = Query(30, ge=7, le=365),
+    limit: int = Query(20, ge=5, le=100),
+):
+    if not is_pro(db):
+        days = min(days, COMMUNITY_MAX_DAYS)
+    all_prs = db.execute(select(PullRequest)).scalars().all()
+    all_commits = db.execute(select(Commit)).scalars().all()
+    cut = cutoff(days)
+
+    # Commits per author in window
+    commit_count: Counter = Counter()
+    display_name: dict[str, str] = {}
+    for c in all_commits:
+        if not (as_utc(c.committed_at) and as_utc(c.committed_at) >= cut):  # type: ignore[operator]
+            continue
+        if is_bot(c.author_login):
+            continue
+        key = c.author_login or c.author_name or "unknown"
+        commit_count[key] += 1
+        if key not in display_name:
+            display_name[key] = c.author_name or key
+
+    # PRs opened in window per author
+    prs_opened: Counter = Counter()
+    prs_merged: Counter = Counter()
+    cycle_times_by_dev: dict[str, list[float]] = defaultdict(list)
+
+    for pr in all_prs:
+        login = pr.author_login or "unknown"
+        if is_bot(login):
+            continue
+
+        created = as_utc(pr.created_at)
+        if created and created >= cut:
+            prs_opened[login] += 1
+            if login not in display_name:
+                display_name[login] = login
+
+        if pr.state == "merged":
+            merged = as_utc(pr.merged_at)
+            if merged and merged >= cut:
+                prs_merged[login] += 1
+                h = _cycle_hours(pr)
+                if h is not None:
+                    cycle_times_by_dev[login].append(h)
+
+    # Union of all known authors
+    all_authors = set(commit_count) | set(prs_opened) | set(prs_merged)
+
+    rows = []
+    for login in all_authors:
+        cycles = cycle_times_by_dev.get(login, [])
+        avg_cycle = round(sum(cycles) / len(cycles), 1) if cycles else None
+        rows.append({
+            "login": login,
+            "displayName": display_name.get(login, login),
+            "commits": commit_count.get(login, 0),
+            "prsOpened": prs_opened.get(login, 0),
+            "prsMerged": prs_merged.get(login, 0),
+            "avgCycleTimeHours": avg_cycle,
+        })
+
+    # Sort by commits desc, then prsMerged desc
+    rows.sort(key=lambda r: (-r["commits"], -r["prsMerged"]))
+    return rows[:limit]

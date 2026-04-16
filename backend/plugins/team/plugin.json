@@ -1,0 +1,131 @@
+{
+  "id": "team",
+  "name": "Team & Activity",
+  "version": "1.0.0",
+  "tier": "community",
+  "description": "Tracks contributor activity, commit trends and activity heatmaps across all repositories.",
+  "widgets": [
+    {
+      "id": "team-contributors",
+      "type": "stat-card",
+      "title": "Active Contributors",
+      "description": "Number of unique contributors who committed in the selected time window.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        },
+        "exclude_bots": {
+          "type": "boolean",
+          "label": "Exclude bots",
+          "default": true
+        },
+        "breakdown": {
+          "type": "boolean",
+          "label": "Breakdown by repository",
+          "default": false,
+          "tier": "pro"
+        }
+      }
+    },
+    {
+      "id": "team-new-contributors",
+      "type": "stat-card",
+      "title": "New Contributors",
+      "description": "Contributors whose first-ever commit to any repository fell within the selected window.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 30,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        },
+        "exclude_bots": {
+          "type": "boolean",
+          "label": "Exclude bots",
+          "default": true
+        }
+      }
+    },
+    {
+      "id": "team-commit-activity",
+      "type": "bar-chart",
+      "title": "Commit Activity",
+      "description": "Daily commit volume over time. Spot spikes and quiet periods at a glance.",
+      "defaultSize": "1/3",
+      "tier": "community",
+      "config": {
+        "days": {
+          "type": "number",
+          "label": "Lookback (days)",
+          "default": 14,
+          "min": 7,
+          "max": 365,
+          "maxCommunity": 90
+        },
+        "exclude_bots": {
+          "type": "boolean",
+          "label": "Exclude bots",
+          "default": true
+        }
+      }
+    },
+    {
+      "id": "team-activity-heatmap",
+      "type": "heatmap",
+      "title": "Activity Heatmap",
+      "description": "GitHub-style contribution heatmap showing commit density by day-of-week and week.",
+      "defaultSize": "full",
+      "tier": "community",
+      "config": {
+        "weeks": {
+          "type": "number",
+          "label": "Weeks to show",
+          "default": 12,
+          "min": 4,
+          "max": 52,
+          "maxCommunity": 26
+        },
+        "exclude_bots": {
+          "type": "boolean",
+          "label": "Exclude bots",
+          "default": true
+        }
+      }
+    }
+  ],
+  "defaultDashboard": {
+    "name": "Team & Activity",
+    "layout": [
+      { "widgetId": "team-contributors",     "width": "1/3" },
+      { "widgetId": "team-new-contributors", "width": "1/3" },
+      { "widgetId": "team-commit-activity",  "width": "1/3" },
+      { "widgetId": "team-activity-heatmap", "width": "full" }
+    ]
+  },
+  "ui": {
+    "navItem": {
+      "label": "Team",
+      "icon": "◉",
+      "path": "/team",
+      "order": 5
+    }
+  },
+  "backend": {
+    "syncHooks": ["onSchedule"],
+    "syncModule": "plugins.team.sync"
+  },
+  "license": {
+    "required": false
+  }
+}

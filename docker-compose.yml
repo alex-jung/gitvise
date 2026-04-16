@@ -3,7 +3,7 @@ services:
         image: python:3.12-slim
         working_dir: /app
         volumes:
-            - ./core/backend:/app
+            - ./backend:/app
             - gitvise-data:/data
         ports:
             - "3001:3001"
@@ -11,29 +11,25 @@ services:
             - PORT=3001
             - DATA_DIR=/data
             - FRONTEND_ORIGIN=http://localhost:3000
-            - PLUGINS_BUILTIN_DIR=/app/plugins/builtin
-            - PLUGINS_EXTERNAL_DIR=/app/plugins/external
+            - PLUGINS_DIR=/app/plugins
         command: >
             sh -c "pip install -r requirements.txt -q && uvicorn main:app --host 0.0.0.0 --port 3001 --reload"
         restart: unless-stopped
 
     frontend:
         image: node:22-alpine
-        # Mount the full monorepo root so workspace packages (packages/ui) are available.
-        # npm install runs from /repo (the workspace root), which links @gitvise/ui locally.
-        # The dev server then starts via the core/frontend workspace script.
         working_dir: /repo
         volumes:
             - ./:/repo
-            - /repo/node_modules                       # isolate root node_modules from host
-            - /repo/core/frontend/node_modules         # isolate frontend node_modules from host
-            - /repo/core/frontend/.next                # persist Next.js build cache
+            - /repo/node_modules
+            - /repo/frontend/node_modules
+            - /repo/frontend/.next
         ports:
             - "3000:3000"
         environment:
             - NODE_ENV=development
             - NEXT_PUBLIC_API_URL=http://localhost:3001
-        command: sh -c "npm install && npm run dev -w core/frontend"
+        command: sh -c "npm install && npm run dev -w frontend"
         depends_on:
             - backend
         restart: unless-stopped
