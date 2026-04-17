@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +38,6 @@ async def lifespan(app: FastAPI):
     app.state.sync_engine = engine
 
     # Trigger an immediate sync on startup if setup is already completed
-    import asyncio
     from core.db import SessionLocal
     from api.setup import _get_config as _cfg
     _db = SessionLocal()

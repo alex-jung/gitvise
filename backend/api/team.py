@@ -43,7 +43,7 @@ def team_summary(
     active_logins = {c.author_login for c in commits if c.author_login}
 
     # New contributors: first commit in the entire history (all_commits) is within window
-    cutoff = cutoff(days)
+    since = cutoff(days)
     first_commit: dict[str, datetime] = {}
     for c in all_commits:
         if not c.author_login or (is_bot(c.author_login) and exclude_bots):
@@ -52,7 +52,7 @@ def team_summary(
         if ts and (c.author_login not in first_commit or ts < first_commit[c.author_login]):
             first_commit[c.author_login] = ts
 
-    new_contributors = sum(1 for ts in first_commit.values() if ts >= cutoff)
+    new_contributors = sum(1 for ts in first_commit.values() if ts >= since)
     avg_per_day = round(len(commits) / days) if days > 0 else 0
 
     last_sync = max((as_utc(c.synced_at) for c in all_commits if c.synced_at), default=None)
@@ -89,7 +89,7 @@ def team_contributors(
             display_name[key] = c.author_name or key
 
     # First-commit date for all-time history
-    cutoff = cutoff(days)
+    since = cutoff(days)
     first_commit: dict[str, datetime] = {}
     for c in all_commits:
         key = c.author_login or c.author_name or "unknown"
@@ -102,7 +102,7 @@ def team_contributors(
     result = []
     for login, count in counter.most_common(limit):
         first = first_commit.get(login)
-        is_new = first is not None and first >= cutoff
+        is_new = first is not None and first >= since
         result.append({
             "login": login,
             "displayName": display_name.get(login, login),

@@ -63,7 +63,7 @@ def alerts_summary(db: Session = Depends(get_db)):
     stale_cutoff = cutoff(stale_days)
     stale_repos = sum(
         1 for r in repos
-        if not r.archived
+        if not r.is_archived
         and (
             r.pushed_at is None
             or as_utc(r.pushed_at) < stale_cutoff
