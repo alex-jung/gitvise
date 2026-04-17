@@ -86,7 +86,7 @@ def prs_age_distribution(db: Session = Depends(get_db)):
 @router.get("/prs/list")
 def prs_list(
     db: Session = Depends(get_db),
-    stale_days: int = Query(7, ge=1),
+    stale_days: int = Query(7, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
     prs = db.execute(select(PullRequest).where(PullRequest.state == "open")).scalars().all()
