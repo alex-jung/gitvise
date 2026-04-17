@@ -36,12 +36,15 @@ import { WidgetCatalog, type WidgetDef } from "@/components/widget-catalog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type WidgetWidth = "1/4" | "1/2" | "3/4" | "full";
+
 interface WidgetLayout {
   widgetId: string;
   pluginId: string;
   row: number;
   col: number;
-  width: "1/3" | "2/3" | "full";
+  width: WidgetWidth;
+  height?: number; // px; undefined = auto (content height)
   config: Record<string, unknown>;
 }
 
@@ -98,10 +101,13 @@ const BUILTIN_WIDGETS: Record<string, WidgetComponent> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const COLS = 4;
+
 function colSpan(width: string): number {
-  if (width === "full") return 3;
-  if (width === "2/3") return 2;
-  return 1;
+  if (width === "full") return COLS;
+  if (width === "3/4") return 3;
+  if (width === "1/2") return 2;
+  return 1; // "1/4"
 }
 
 /** Recompute row/col for each item based on its order and width. */
@@ -110,10 +116,10 @@ function recomputeGrid(items: WidgetLayout[]): WidgetLayout[] {
   let col = 1;
   return items.map((item) => {
     const span = colSpan(item.width);
-    if (col + span - 1 > 3) { row++; col = 1; }
+    if (col + span - 1 > COLS) { row++; col = 1; }
     const result = { ...item, row, col };
     col += span;
-    if (col > 3) { row++; col = 1; }
+    if (col > COLS) { row++; col = 1; }
     return result;
   });
 }
@@ -150,43 +156,63 @@ function PlaceholderWidget({ title }: { title: string }) {
   );
 }
 
-// ── Width selector (edit mode) ────────────────────────────────────────────────
+// ── Size selectors (edit mode) ────────────────────────────────────────────────
+
+const selectorBtnStyle = (active: boolean): React.CSSProperties => ({
+  padding: "2px 8px",
+  fontSize: "var(--font-size-xs)",
+  borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--color-border)",
+  background: active ? "var(--color-primary)" : "transparent",
+  color: active ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+  cursor: "pointer",
+  fontWeight: active ? 600 : 400,
+});
 
 function WidthButtons({
   current,
   onChange,
 }: {
-  current: "1/3" | "2/3" | "full";
-  onChange: (w: "1/3" | "2/3" | "full") => void;
+  current: WidgetWidth;
+  onChange: (w: WidgetWidth) => void;
 }) {
-  const options: Array<{ value: "1/3" | "2/3" | "full"; label: string }> = [
-    { value: "1/3", label: "1/3" },
-    { value: "2/3", label: "2/3" },
+  const options: Array<{ value: WidgetWidth; label: string }> = [
+    { value: "1/4", label: "1/4" },
+    { value: "1/2", label: "1/2" },
+    { value: "3/4", label: "3/4" },
     { value: "full", label: "Voll" },
   ];
   return (
     <div style={{ display: "flex", gap: 2 }}>
       {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          style={{
-            padding: "2px 8px",
-            fontSize: "var(--font-size-xs)",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--color-border)",
-            background:
-              current === o.value
-                ? "var(--color-primary)"
-                : "transparent",
-            color:
-              current === o.value
-                ? "var(--color-text-inverse)"
-                : "var(--color-text-muted)",
-            cursor: "pointer",
-            fontWeight: current === o.value ? 600 : 400,
-          }}
-        >
+        <button key={o.value} onClick={() => onChange(o.value)} style={selectorBtnStyle(current === o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const HEIGHT_PRESETS: Array<{ value: number | undefined; label: string }> = [
+  { value: undefined, label: "Auto" },
+  { value: 200,       label: "200" },
+  { value: 300,       label: "300" },
+  { value: 400,       label: "400" },
+  { value: 500,       label: "500" },
+  { value: 600,       label: "600" },
+];
+
+function HeightButtons({
+  current,
+  onChange,
+}: {
+  current: number | undefined;
+  onChange: (h: number | undefined) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 2 }}>
+      {HEIGHT_PRESETS.map((o) => (
+        <button key={String(o.value)} onClick={() => onChange(o.value)} style={selectorBtnStyle(current === o.value)}>
           {o.label}
         </button>
       ))}
@@ -554,9 +580,15 @@ export function DashboardGrid() {
     setDraftLayout((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const changeWidth = (index: number, width: "1/3" | "2/3" | "full") => {
+  const changeWidth = (index: number, width: WidgetWidth) => {
     setDraftLayout((prev) =>
       prev.map((item, i) => (i === index ? { ...item, width } : item))
+    );
+  };
+
+  const changeHeight = (index: number, height: number | undefined) => {
+    setDraftLayout((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, height } : item))
     );
   };
 
@@ -569,7 +601,8 @@ export function DashboardGrid() {
         pluginId: def.pluginId,
         row: 1,
         col: 1,
-        width: (def.defaultSize as "1/3" | "2/3" | "full") ?? "1/3",
+        width: (def.defaultSize as WidgetWidth) ?? "1/4",
+        height: undefined,
         config: defaultConfig(def),
       },
     ]);
@@ -631,11 +664,11 @@ export function DashboardGrid() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
           gap: "var(--space-4)",
         }}
       >
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <DashboardCard key={i} title="" loading />
         ))}
       </div>
@@ -701,7 +734,7 @@ export function DashboardGrid() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: `repeat(${COLS}, 1fr)`,
             gap: "var(--space-4)",
             alignItems: "start",
           }}
@@ -729,6 +762,7 @@ export function DashboardGrid() {
                 onDragEnd={editMode ? handleDragEnd : undefined}
                 style={{
                   gridColumn: span > 1 ? `span ${span}` : undefined,
+                  ...(item.height ? { height: item.height, overflow: "hidden" } : {}),
                   opacity: isDragging ? 0.4 : 1,
                   outline: isDropTarget
                     ? "2px solid var(--color-primary)"
@@ -743,52 +777,61 @@ export function DashboardGrid() {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
+                      flexDirection: "column",
+                      gap: "var(--space-1)",
                       marginBottom: "var(--space-2)",
                       padding: "0 var(--space-1)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                      {/* Drag handle */}
-                      <span
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        {/* Drag handle */}
+                        <span
+                          style={{
+                            color: "var(--color-text-muted)",
+                            fontSize: 14,
+                            cursor: "grab",
+                            userSelect: "none",
+                            letterSpacing: -1,
+                          }}
+                        >
+                          ⠿
+                        </span>
+                        <WidthButtons
+                          current={item.width}
+                          onChange={(w) => changeWidth(index, w)}
+                        />
+                      </div>
+                      {/* Remove button */}
+                      <button
+                        onClick={() => removeWidget(index)}
+                        title="Widget entfernen"
                         style={{
-                          color: "var(--color-text-muted)",
+                          width: 22,
+                          height: 22,
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--color-border)",
+                          background: "transparent",
+                          color: "var(--color-danger)",
                           fontSize: 14,
-                          cursor: "grab",
-                          userSelect: "none",
-                          letterSpacing: -1,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          lineHeight: 1,
+                          flexShrink: 0,
                         }}
                       >
-                        ⠿
-                      </span>
-                      <WidthButtons
-                        current={item.width}
-                        onChange={(w) => changeWidth(index, w)}
+                        ×
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", flexShrink: 0 }}>px</span>
+                      <HeightButtons
+                        current={item.height}
+                        onChange={(h) => changeHeight(index, h)}
                       />
                     </div>
-                    {/* Remove button */}
-                    <button
-                      onClick={() => removeWidget(index)}
-                      title="Widget entfernen"
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: "var(--radius-sm)",
-                        border: "1px solid var(--color-border)",
-                        background: "transparent",
-                        color: "var(--color-danger)",
-                        fontSize: 14,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        lineHeight: 1,
-                        flexShrink: 0,
-                      }}
-                    >
-                      ×
-                    </button>
                   </div>
                 )}
 
