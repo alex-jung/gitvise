@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 import httpx
+import json
 
 from core.auth import SESSION_COOKIE, SESSION_DURATION_DAYS, create_session
 from core.db import get_db
@@ -24,6 +25,14 @@ class SetupRequest(BaseModel):
     github_org: str
     sync_interval_sec: int = 300
     license_key: str = ""
+
+
+class SwitchOrgRequest(BaseModel):
+    org: str
+
+
+class AddOrgRequest(BaseModel):
+    org: str
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -135,11 +144,87 @@ async def get_config(db: Session = Depends(get_db)):
     """Return non-sensitive config values for the Settings UI."""
     from core.license import get_license_status
     license_status = get_license_status(db)
+    active_org = _get_config(db, "github_org") or ""
+    orgs_raw = _get_config(db, "github_orgs")
+    orgs: list[str] = json.loads(orgs_raw) if orgs_raw else []
+    # Ensure active org is always in the list
+    if active_org and active_org not in orgs:
+        orgs = [active_org] + orgs
     return {
         "githubAuthType": _get_config(db, "github_auth_type"),
-        "githubOrg": _get_config(db, "github_org"),
+        "githubOrg": active_org,
+        "githubOrgs": orgs,
         "syncIntervalSec": int(_get_config(db, "sync_interval_sec") or 300),
         "hasLicenseKey": bool(_get_config(db, "license_key")),
         "licenseStatus": license_status,
         "setupCompleted": _get_config(db, "setup_completed") == "true",
     }
+
+
+@router.post("/setup/switch-org")
+async def switch_org(body: SwitchOrgRequest, db: Session = Depends(get_db)):
+    """Switch the active GitHub org/user and trigger an immediate sync."""
+    org = body.org.strip()
+    if not org:
+        raise HTTPException(status_code=400, detail="org must not be empty")
+
+    # Ensure the org is in the saved list
+    orgs_raw = _get_config(db, "github_orgs")
+    orgs: list[str] = json.loads(orgs_raw) if orgs_raw else []
+    if org not in orgs:
+        orgs.insert(0, org)
+    _set_config(db, "github_orgs", json.dumps(orgs))
+    _set_config(db, "github_org", org)
+    db.commit()
+
+    import asyncio
+    from main import app
+    engine = getattr(app.state, "sync_engine", None)
+    if engine:
+        asyncio.create_task(engine.trigger())
+
+    return {"success": True, "activeOrg": org}
+
+
+@router.post("/setup/orgs")
+async def add_org(body: AddOrgRequest, db: Session = Depends(get_db)):
+    """Add an org/user to the saved list without switching to it."""
+    org = body.org.strip()
+    if not org:
+        raise HTTPException(status_code=400, detail="org must not be empty")
+
+    orgs_raw = _get_config(db, "github_orgs")
+    orgs: list[str] = json.loads(orgs_raw) if orgs_raw else []
+
+    # Also include currently active org if not yet in the list
+    active_org = _get_config(db, "github_org") or ""
+    if active_org and active_org not in orgs:
+        orgs = [active_org] + orgs
+
+    if org in orgs:
+        return {"success": True, "orgs": orgs}
+
+    orgs.append(org)
+    _set_config(db, "github_orgs", json.dumps(orgs))
+    db.commit()
+    return {"success": True, "orgs": orgs}
+
+
+@router.delete("/setup/orgs/{org}")
+async def remove_org(org: str, db: Session = Depends(get_db)):
+    """Remove an org/user from the saved list."""
+    orgs_raw = _get_config(db, "github_orgs")
+    orgs: list[str] = json.loads(orgs_raw) if orgs_raw else []
+
+    active_org = _get_config(db, "github_org") or ""
+    # Also ensure active org is in list before filtering
+    if active_org and active_org not in orgs:
+        orgs = [active_org] + orgs
+
+    if org == active_org:
+        raise HTTPException(status_code=400, detail="Cannot remove the currently active org")
+
+    orgs = [o for o in orgs if o != org]
+    _set_config(db, "github_orgs", json.dumps(orgs))
+    db.commit()
+    return {"success": True, "orgs": orgs}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { useToast } from "@/context/toast-context";
 import { useLicense } from "@/context/license-context";
@@ -13,6 +13,7 @@ import type { Tab } from "@/components/ui/tabs";
 interface Config {
   githubAuthType: string;
   githubOrg: string;
+  githubOrgs: string[];
   syncIntervalSec: number;
   hasLicenseKey: boolean;
   setupCompleted: boolean;
@@ -44,6 +45,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseValidating, setLicenseValidating] = useState(false);
   const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [newOrg, setNewOrg] = useState("");
+  const [addingOrg, setAddingOrg] = useState(false);
+  const newOrgInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -56,6 +60,37 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       })
       .catch(() => {});
   }, [open]);
+
+  const addOrg = async () => {
+    const org = newOrg.trim();
+    if (!org) return;
+    setAddingOrg(true);
+    try {
+      const result = await apiPost<{ orgs: string[] }>("/api/core/setup/orgs", { org });
+      setConfig((c) => c ? { ...c, githubOrgs: result.orgs } : c);
+      setNewOrg("");
+      notify(`Added "${org}"`, "success");
+    } catch {
+      notify("Failed to add org", "error");
+    } finally {
+      setAddingOrg(false);
+    }
+  };
+
+  const removeOrg = async (org: string) => {
+    try {
+      const result = await apiDelete<{ orgs: string[] }>(`/api/core/setup/orgs/${encodeURIComponent(org)}`);
+      setConfig((c) => c ? { ...c, githubOrgs: result.orgs } : c);
+      notify(`Removed "${org}"`, "info");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("400")) {
+        notify("Cannot remove the active org", "error");
+      } else {
+        notify("Failed to remove org", "error");
+      }
+    }
+  };
 
   const activateLicense = async () => {
     if (!licenseKey.trim()) return;
@@ -129,12 +164,89 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       {activeTab === "general" && (
         <div>
           <Section title="GitHub">
-            <Field label="Organisation / User">
-              <input
-                value={config?.githubOrg ?? ""}
-                onChange={(e) => setConfig((c) => c ? { ...c, githubOrg: e.target.value } : c)}
-                style={inputStyle}
-              />
+            <Field label="Watched Orgs / Users">
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                {(config?.githubOrgs ?? []).map((o) => (
+                  <div
+                    key={o}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "var(--space-2) var(--space-3)",
+                      background: "var(--color-sidebar-item-active)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "var(--font-size-sm)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>{o}</span>
+                      {o === config?.githubOrg && (
+                        <span style={{
+                          fontSize: "var(--font-size-xs)",
+                          background: "var(--color-primary)",
+                          color: "var(--color-text-inverse)",
+                          borderRadius: "var(--radius-sm)",
+                          padding: "1px 6px",
+                          fontWeight: 600,
+                        }}>active</span>
+                      )}
+                    </div>
+                    {o !== config?.githubOrg && (
+                      <button
+                        onClick={() => removeOrg(o)}
+                        title="Remove"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--color-text-muted)",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          lineHeight: 1,
+                          padding: "2px 4px",
+                          borderRadius: "var(--radius-sm)",
+                          transition: "color 120ms",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-danger)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add new org */}
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <input
+                  ref={newOrgInputRef}
+                  type="text"
+                  placeholder="org-name or username"
+                  value={newOrg}
+                  onChange={(e) => setNewOrg(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addOrg(); }}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button
+                  onClick={addOrg}
+                  disabled={addingOrg || !newOrg.trim()}
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--color-primary)",
+                    color: "var(--color-text-inverse)",
+                    border: "none",
+                    fontWeight: 500,
+                    cursor: addingOrg || !newOrg.trim() ? "not-allowed" : "pointer",
+                    opacity: addingOrg || !newOrg.trim() ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                    fontSize: "var(--font-size-sm)",
+                  }}
+                >
+                  Add
+                </button>
+              </div>
             </Field>
             <Field label="Authentication">
               <div style={{ color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
