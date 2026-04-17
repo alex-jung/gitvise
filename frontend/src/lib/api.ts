@@ -1,7 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 function redirect401() {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
     window.location.href = "/login";
   }
 }
