@@ -49,3 +49,5 @@ export { Modal } from "./modal";
 
 // Util
 export { RelativeTime } from "./relative-time";
+export { Icon } from "./icon";
+export type { IconName } from "./icon";

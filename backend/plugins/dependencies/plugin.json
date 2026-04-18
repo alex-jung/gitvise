@@ -66,22 +66,36 @@
   "defaultDashboard": {
     "name": "Dependencies & Security",
     "layout": [
-      { "widgetId": "vuln-summary",     "width": "1/3" },
-      { "widgetId": "security-score",   "width": "1/3" },
-      { "widgetId": "affected-repos",   "width": "1/3" },
-      { "widgetId": "license-overview", "width": "full" }
+      {
+        "widgetId": "vuln-summary",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "security-score",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "affected-repos",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "license-overview",
+        "width": "full"
+      }
     ]
   },
   "ui": {
     "navItem": {
       "label": "Security",
-      "icon": "⚑",
+      "icon": "security",
       "path": "/dependencies",
       "order": 4
     }
   },
   "backend": {
-    "syncHooks": ["onSchedule"],
+    "syncHooks": [
+      "onSchedule"
+    ],
     "syncModule": "plugins.dependencies.sync"
   },
   "license": {

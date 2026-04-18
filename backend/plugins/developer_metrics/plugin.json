@@ -119,23 +119,40 @@
   "defaultDashboard": {
     "name": "Developer Metrics",
     "layout": [
-      { "widgetId": "dev-pr-cycle-time",   "width": "1/3" },
-      { "widgetId": "dev-pr-merge-rate",   "width": "1/3" },
-      { "widgetId": "dev-top-committers",  "width": "1/3" },
-      { "widgetId": "dev-cycle-time-trend","width": "2/3" },
-      { "widgetId": "dev-leaderboard",     "width": "full" }
+      {
+        "widgetId": "dev-pr-cycle-time",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "dev-pr-merge-rate",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "dev-top-committers",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "dev-cycle-time-trend",
+        "width": "2/3"
+      },
+      {
+        "widgetId": "dev-leaderboard",
+        "width": "full"
+      }
     ]
   },
   "ui": {
     "navItem": {
       "label": "Dev Metrics",
-      "icon": "⚡",
+      "icon": "dev-metrics",
       "path": "/dev-metrics",
       "order": 6
     }
   },
   "backend": {
-    "syncHooks": ["onSchedule"],
+    "syncHooks": [
+      "onSchedule"
+    ],
     "syncModule": "plugins.developer_metrics.sync"
   },
   "license": {

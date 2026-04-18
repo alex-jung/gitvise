@@ -1,41 +1,60 @@
+function healthColor(score: number): string {
+  if (score >= 80) return "var(--color-success)";
+  if (score >= 60) return "var(--color-warning)";
+  if (score >= 40) return "color-mix(in srgb, var(--color-warning) 50%, var(--color-danger))";
+  return "var(--color-danger)";
+}
+
+const SEGS = 10;
+
 export function HealthBadge({ score }: { score: number }) {
-  const color =
-    score >= 80
-      ? "text-green-400"
-      : score >= 60
-      ? "text-yellow-400"
-      : score >= 40
-      ? "text-orange-400"
-      : "text-red-400";
-
-  const icon = score >= 80 ? "🟢" : score >= 60 ? "🟡" : score >= 40 ? "🟠" : "🔴";
-
+  const color = healthColor(score);
   return (
-    <span className={`font-mono font-semibold ${color}`}>
-      {icon} {score}
+    <span style={{
+      fontFamily: "var(--font-data)",
+      fontWeight: 700,
+      fontSize: "var(--font-size-sm)",
+      color,
+      background: `color-mix(in srgb, ${color} 10%, transparent)`,
+      padding: "1px 6px",
+      borderRadius: "var(--radius-sm)",
+      borderLeft: `2px solid ${color}`,
+      letterSpacing: "0.02em",
+    }}>
+      {score}
     </span>
   );
 }
 
 export function HealthBar({ score }: { score: number }) {
-  const color =
-    score >= 80
-      ? "bg-green-500"
-      : score >= 60
-      ? "bg-yellow-500"
-      : score >= 40
-      ? "bg-orange-500"
-      : "bg-red-500";
+  const color = healthColor(score);
+  const filled = Math.round((score / 100) * SEGS);
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color}`}
-          style={{ width: `${score}%` }}
-        />
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ display: "flex", flex: 1, gap: 2 }}>
+        {Array.from({ length: SEGS }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 1,
+              background: i < filled ? color : "var(--color-border)",
+            }}
+          />
+        ))}
       </div>
-      <span className="text-xs font-mono text-gray-400 w-8 text-right">{score}</span>
+      <span style={{
+        fontFamily: "var(--font-data)",
+        fontSize: 11,
+        color: "var(--color-text-muted)",
+        width: 22,
+        textAlign: "right",
+        flexShrink: 0,
+      }}>
+        {score}
+      </span>
     </div>
   );
 }

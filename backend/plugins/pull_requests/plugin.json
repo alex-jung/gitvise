@@ -88,24 +88,44 @@
   "defaultDashboard": {
     "name": "Pull Requests & Issues",
     "layout": [
-      { "widgetId": "prs-open-count",       "width": "1/3" },
-      { "widgetId": "issues-open-count",     "width": "1/3" },
-      { "widgetId": "prs-draft-ratio",       "width": "1/3" },
-      { "widgetId": "prs-age-distribution",  "width": "2/3" },
-      { "widgetId": "issues-by-label",       "width": "1/3" },
-      { "widgetId": "prs-stale-table",       "width": "full" }
+      {
+        "widgetId": "prs-open-count",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "issues-open-count",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "prs-draft-ratio",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "prs-age-distribution",
+        "width": "2/3"
+      },
+      {
+        "widgetId": "issues-by-label",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "prs-stale-table",
+        "width": "full"
+      }
     ]
   },
   "ui": {
     "navItem": {
       "label": "Pull Requests",
-      "icon": "⌥",
+      "icon": "pull-requests",
       "path": "/pull-requests",
       "order": 2
     }
   },
   "backend": {
-    "syncHooks": ["onSchedule"],
+    "syncHooks": [
+      "onSchedule"
+    ],
     "syncModule": "plugins.pull_requests.sync"
   },
   "license": {
