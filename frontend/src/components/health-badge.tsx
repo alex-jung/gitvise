@@ -32,18 +32,21 @@ export function HealthBar({ score }: { score: number }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <div style={{ display: "flex", flex: 1, gap: 2 }}>
-        {Array.from({ length: SEGS }, (_, i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              height: 4,
-              borderRadius: 1,
-              background: i < filled ? color : "var(--color-border)",
-            }}
-          />
-        ))}
+      <div style={{ display: "flex", flex: 1, gap: 2, alignItems: "center" }}>
+        {Array.from({ length: SEGS }, (_, i) => {
+          const active = i < filled;
+          return (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: active ? 5 : 3,
+                borderRadius: 1,
+                background: active ? color : "var(--color-border)",
+              }}
+            />
+          );
+        })}
       </div>
       <span style={{
         fontFamily: "var(--font-data)",

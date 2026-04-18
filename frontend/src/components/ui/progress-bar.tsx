@@ -4,7 +4,8 @@ export type ProgressBarSize  = "sm" | "md" | "lg";
 interface ProgressBarProps {
   value: number;
   max?: number;
-  color?: ProgressBarColor;
+  /** Named color token or any CSS color string */
+  color?: ProgressBarColor | string;
   /** Automatically choose green/yellow/red based on percentage */
   colorAuto?: boolean;
   showValue?: boolean;
@@ -20,11 +21,12 @@ const COLOR_VAR: Record<ProgressBarColor, string> = {
   danger:  "var(--color-danger)",
 };
 
-// Segment count and block height per size
-const SIZE_CONFIG: Record<ProgressBarSize, { segments: number; height: number }> = {
-  sm: { segments: 10, height: 4  },
-  md: { segments: 12, height: 6  },
-  lg: { segments: 16, height: 10 },
+// Segment count and heights per size.
+// filledHeight: colored/active blocks  emptyHeight: gray track blocks (shorter)
+const SIZE_CONFIG: Record<ProgressBarSize, { segments: number; filledHeight: number; emptyHeight: number }> = {
+  sm: { segments: 10, filledHeight: 5,  emptyHeight: 3  },
+  md: { segments: 12, filledHeight: 7,  emptyHeight: 4  },
+  lg: { segments: 16, filledHeight: 11, emptyHeight: 6  },
 };
 
 function autoColor(pct: number): string {
@@ -44,8 +46,8 @@ export function ProgressBar({
   animated = false,
 }: ProgressBarProps) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
-  const fill = colorAuto ? autoColor(pct) : COLOR_VAR[color];
-  const { segments, height } = SIZE_CONFIG[size];
+  const fill = colorAuto ? autoColor(pct) : (COLOR_VAR[color as ProgressBarColor] ?? color ?? COLOR_VAR.primary);
+  const { segments, filledHeight, emptyHeight } = SIZE_CONFIG[size];
   const filledCount = Math.round((pct / 100) * segments);
 
   return (
@@ -64,20 +66,23 @@ export function ProgressBar({
       )}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
         {/* Segmented blocks */}
-        <div style={{ flex: 1, display: "flex", gap: 2 }}>
-          {Array.from({ length: segments }, (_, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height,
-                borderRadius: 1,
-                background: i < filledCount ? fill : "var(--color-border)",
-                transition: animated ? "background 300ms ease" : undefined,
-                transitionDelay: animated ? `${i * 20}ms` : undefined,
-              }}
-            />
-          ))}
+        <div style={{ flex: 1, display: "flex", gap: 2, alignItems: "center" }}>
+          {Array.from({ length: segments }, (_, i) => {
+            const active = i < filledCount;
+            return (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: active ? filledHeight : emptyHeight,
+                  borderRadius: 1,
+                  background: active ? fill : "var(--color-border)",
+                  transition: animated ? "background 300ms ease, height 300ms ease" : undefined,
+                  transitionDelay: animated ? `${i * 20}ms` : undefined,
+                }}
+              />
+            );
+          })}
         </div>
         {showValue && (
           <span style={{

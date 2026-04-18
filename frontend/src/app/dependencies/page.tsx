@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
-import { Gauge } from "@/components/ui";
+import { Gauge, ProgressBar } from "@/components/ui";
 import type { GaugeZone } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -241,8 +241,8 @@ export default function DependenciesPage() {
                       <span style={{ width: 140, fontSize: "var(--font-size-sm)", color: "var(--color-text-primary)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {l.license}
                       </span>
-                      <div style={{ flex: 1, height: 8, background: "var(--color-border)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", background: "var(--color-primary)", borderRadius: "var(--radius-full)", transition: "width 400ms" }} />
+                      <div style={{ flex: 1 }}>
+                        <ProgressBar value={pct} max={100} color="primary" size="sm" animated />
                       </div>
                       <span style={{ width: 60, fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textAlign: "right", flexShrink: 0 }}>
                         {l.count} ({pct}%)

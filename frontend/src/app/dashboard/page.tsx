@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiGet, apiPost } from "@/lib/api";
-import { DashboardCard, LineChart, BarChart, Icon } from "@/components/ui";
+import { DashboardCard, LineChart, BarChart, Icon, ProgressBar } from "@/components/ui";
 import type { LineChartSeries, BarChartSeries } from "@/components/ui";
 
 // ── First-run sync ────────────────────────────────────────────────────────────
@@ -157,16 +157,7 @@ function RepoHealthCard() {
       {loading ? <SkeletonCard /> : data && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           <BigValue value={score} unit="/ 100" color={scoreColor} />
-          {/* Score progress bar */}
-          <div style={{ height: 6, background: "var(--color-border)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
-            <div style={{
-              height: "100%",
-              width: `${score}%`,
-              background: scoreColor,
-              borderRadius: "var(--radius-full)",
-              transition: "width 0.4s ease",
-            }} />
-          </div>
+          <ProgressBar value={score} max={100} colorAuto size="sm" animated />
           <div style={{ display: "flex", gap: "var(--space-4)" }}>
             <SubStat label="Repos" value={data.total} />
             <SubStat label="Critical" value={data.critical} color={data.critical > 0 ? "var(--color-danger)" : undefined} />
@@ -370,13 +361,8 @@ function SecurityCard() {
               {sevBuckets.map(({ key, label, value }) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                   <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", width: 46, flexShrink: 0 }}>{label}</span>
-                  <div style={{ flex: 1, height: 6, background: "var(--color-border)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
-                    <div style={{
-                      height: "100%",
-                      width: `${(value / maxSev) * 100}%`,
-                      background: SEV_COLORS[key],
-                      borderRadius: "var(--radius-full)",
-                    }} />
+                  <div style={{ flex: 1 }}>
+                    <ProgressBar value={value} max={maxSev} color={SEV_COLORS[key]} size="sm" />
                   </div>
                   <span style={{
                     fontSize: "var(--font-size-xs)",
