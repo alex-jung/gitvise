@@ -74,10 +74,11 @@ export function Table<T>({
                   padding: "var(--space-3) var(--space-4)",
                   textAlign: col.align ?? "left",
                   fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-mono)",
                   fontWeight: 600,
                   color: "var(--color-text-muted)",
                   textTransform: "uppercase",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.07em",
                   cursor: col.sortable ? "pointer" : "default",
                   userSelect: "none",
                   width: col.width,
@@ -133,14 +134,16 @@ export function Table<T>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 style={{
                   borderTop: i > 0 ? "1px solid var(--color-border-subtle)" : undefined,
+                  // Subtle zebra stripe on even rows
+                  background: i % 2 === 1 ? "var(--color-surface-raised)" : undefined,
                   cursor: onRowClick ? "pointer" : "default",
                   transition: "background 100ms",
                 }}
                 onMouseEnter={(e) => {
-                  if (onRowClick) (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover, rgba(255,255,255,0.04))";
+                  (e.currentTarget as HTMLElement).style.background = "color-mix(in srgb, var(--color-primary) 6%, transparent)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "";
+                  (e.currentTarget as HTMLElement).style.background = i % 2 === 1 ? "var(--color-surface-raised)" : "";
                 }}
               >
                 {columns.map((col) => (

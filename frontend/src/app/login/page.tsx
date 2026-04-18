@@ -34,7 +34,7 @@ export default function LoginPage() {
         setError("Login failed. Please try again.");
         return;
       }
-      router.replace("/overview");
+      router.replace("/dashboard");
     } catch {
       setError("Could not reach backend.");
     } finally {

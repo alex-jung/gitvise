@@ -110,7 +110,7 @@ export function Topbar({ onOpenSettings }: TopbarProps) {
       {/* Logo + Org Switcher */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
         <Link
-          href="/overview"
+          href="/dashboard"
           style={{
             display: "flex",
             alignItems: "center",

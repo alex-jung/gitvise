@@ -38,13 +38,16 @@
   "defaultDashboard": {
     "name": "Alerts & Notifications",
     "layout": [
-      { "widgetId": "alert-status", "width": "1/3" }
+      {
+        "widgetId": "alert-status",
+        "width": "1/3"
+      }
     ]
   },
   "ui": {
     "navItem": {
       "label": "Alerts",
-      "icon": "◎",
+      "icon": "alerts",
       "path": "/alerts",
       "order": 7
     }

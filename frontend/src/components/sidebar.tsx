@@ -5,8 +5,18 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { SyncStatus } from "@/components/sync-status";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+const KNOWN_ICONS = new Set<IconName>([
+  "dashboard", "repo-health", "pull-requests", "ci-cd",
+  "security", "team", "dev-metrics", "alerts",
+]);
+
+function resolveIcon(raw: string): IconName | null {
+  return KNOWN_ICONS.has(raw as IconName) ? (raw as IconName) : null;
+}
 
 interface PluginNavItem {
   label: string;
@@ -22,7 +32,7 @@ interface Plugin {
 }
 
 // Core nav items (always present, not from plugins)
-const CORE_NAV = [{ href: "/overview", label: "Overview", icon: "◈", order: 0 }];
+const CORE_NAV = [{ href: "/dashboard", label: "Dashboard", icon: "dashboard" as IconName, order: 0 }];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -115,7 +125,10 @@ export function Sidebar() {
                 justifyContent: collapsed ? "center" : "flex-start",
               }}
             >
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+              {resolveIcon(item.icon)
+                ? <Icon name={resolveIcon(item.icon)!} size={16} />
+                : <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+              }
               {!collapsed && (
                 <>
                   <span style={{ flex: 1 }}>{item.label}</span>

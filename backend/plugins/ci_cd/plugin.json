@@ -94,22 +94,36 @@
   "defaultDashboard": {
     "name": "CI/CD & Actions",
     "layout": [
-      { "widgetId": "ci-status-summary",    "width": "1/3" },
-      { "widgetId": "ci-failing-workflows", "width": "2/3" },
-      { "widgetId": "ci-duration-trend",    "width": "2/3" },
-      { "widgetId": "ci-run-history",       "width": "full" }
+      {
+        "widgetId": "ci-status-summary",
+        "width": "1/3"
+      },
+      {
+        "widgetId": "ci-failing-workflows",
+        "width": "2/3"
+      },
+      {
+        "widgetId": "ci-duration-trend",
+        "width": "2/3"
+      },
+      {
+        "widgetId": "ci-run-history",
+        "width": "full"
+      }
     ]
   },
   "ui": {
     "navItem": {
       "label": "CI/CD",
-      "icon": "⚙",
+      "icon": "ci-cd",
       "path": "/ci-cd",
       "order": 3
     }
   },
   "backend": {
-    "syncHooks": ["onSchedule"],
+    "syncHooks": [
+      "onSchedule"
+    ],
     "syncModule": "plugins.ci_cd.sync"
   },
   "license": {

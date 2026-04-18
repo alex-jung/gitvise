@@ -17,7 +17,7 @@ interface StatCardProps {
   onClick?: () => void;
 }
 
-const STATUS_BORDER: Record<StatCardStatus, string> = {
+const STATUS_ACCENT: Record<StatCardStatus, string> = {
   ok:       "var(--color-border)",
   warning:  "var(--color-warning)",
   critical: "var(--color-danger)",
@@ -33,8 +33,14 @@ function TrendIndicator({ trend, inverse }: { trend: number; inverse?: boolean }
   const arrow = trend > 0 ? "↑" : trend < 0 ? "↓" : "→";
 
   return (
-    <span style={{ color, fontSize: "var(--font-size-sm)", fontWeight: 500 }}>
-      {arrow} {Math.abs(trend)}
+    <span style={{
+      color,
+      fontSize: "var(--font-size-xs)",
+      fontFamily: "var(--font-data)",
+      fontWeight: 600,
+      letterSpacing: "0.02em",
+    }}>
+      {arrow}{Math.abs(trend)}
     </span>
   );
 }
@@ -52,21 +58,20 @@ export function StatCard({
   loading = false,
   onClick,
 }: StatCardProps) {
-  const border = status ? STATUS_BORDER[status] : "var(--color-border)";
+  const accent = status ? STATUS_ACCENT[status] : "var(--color-border)";
 
   if (loading) {
     return (
-      <div
-        style={{
-          background: "var(--color-surface)",
-          border: `1px solid var(--color-border)`,
-          borderRadius: "var(--radius-lg)",
-          padding: "var(--space-4)",
-          minHeight: 90,
-        }}
-      >
-        <div style={{ height: 12, width: "40%", background: "var(--color-border)", borderRadius: "var(--radius-sm)", marginBottom: "var(--space-2)" }} />
-        <div style={{ height: 28, width: "60%", background: "var(--color-border)", borderRadius: "var(--radius-sm)" }} />
+      <div style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderLeft: `3px solid var(--color-border)`,
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-4)",
+        minHeight: 90,
+      }}>
+        <div style={{ height: 10, width: "40%", background: "var(--color-border)", borderRadius: 1, marginBottom: "var(--space-2)" }} />
+        <div style={{ height: 28, width: "55%", background: "var(--color-border)", borderRadius: 1 }} />
       </div>
     );
   }
@@ -76,24 +81,39 @@ export function StatCard({
       onClick={onClick}
       style={{
         background: "var(--color-surface)",
-        border: `1px solid ${border}`,
+        border: "1px solid var(--color-border)",
+        borderLeft: `3px solid ${accent}`,
         borderRadius: "var(--radius-lg)",
         padding: "var(--space-4)",
         cursor: onClick ? "pointer" : "default",
-        transition: "border-color 150ms",
+        transition: "border-color 150ms, background 150ms",
       }}
     >
-      {/* Header row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-2)" }}>
-        <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+      {/* Label row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
+        <span style={{
+          fontSize: "var(--font-size-xs)",
+          fontFamily: "var(--font-mono)",
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+          color: "var(--color-text-muted)",
+          fontWeight: 600,
+        }}>
           {label}
         </span>
-        {icon && <span style={{ color: "var(--color-text-muted)", fontSize: 16 }}>{icon}</span>}
+        {icon && <span style={{ color: "var(--color-text-muted)", fontSize: 14 }}>{icon}</span>}
       </div>
 
-      {/* Value */}
+      {/* Value + trend */}
       <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "var(--font-size-2xl)", fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>
+        <span style={{
+          fontSize: "var(--font-size-2xl)",
+          fontWeight: 700,
+          fontFamily: "var(--font-data)",
+          color: "var(--color-text-primary)",
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+        }}>
           {value}
         </span>
         {trend !== undefined && (
@@ -101,14 +121,17 @@ export function StatCard({
         )}
       </div>
 
-      {/* Sublabel / trend label */}
       {(sublabel || trendLabel) && (
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
+        <div style={{
+          fontSize: "var(--font-size-xs)",
+          fontFamily: "var(--font-mono)",
+          color: "var(--color-text-muted)",
+          marginTop: "var(--space-1)",
+        }}>
           {sublabel ?? trendLabel}
         </div>
       )}
 
-      {/* Sparkline */}
       {sparkline && <div style={{ marginTop: "var(--space-3)" }}>{sparkline}</div>}
     </div>
   );

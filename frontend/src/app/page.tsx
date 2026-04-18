@@ -39,7 +39,7 @@ export default function Home() {
           if (sessionRes.status === 401) {
             router.replace("/login");
           } else {
-            router.replace("/overview");
+            router.replace("/dashboard");
           }
         }
       } catch {

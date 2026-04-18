@@ -367,7 +367,7 @@ export default function SetupPage() {
       .then((r) => r.json())
       .then((data: { completed: boolean; hasPassword: boolean }) => {
         if (data.completed) {
-          window.location.href = "/overview";
+          window.location.href = "/dashboard";
           // keep checking=true so nothing renders while redirecting
           return;
         }
@@ -401,7 +401,7 @@ export default function SetupPage() {
         sync_interval_sec: form.syncIntervalSec,
         license_key: form.licenseKey,
       });
-      router.push("/overview");
+      router.push("/dashboard");
     } catch {
       setSaving(false);
     }

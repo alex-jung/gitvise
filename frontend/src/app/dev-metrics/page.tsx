@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
-import { LineChart, BarChart } from "@/components/ui";
+import { LineChart, BarChart, ProgressBar } from "@/components/ui";
 import type { LineChartSeries, BarChartSeries } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -216,8 +216,8 @@ export default function DevMetricsPage() {
                     </td>
                     <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-                        <div style={{ width: 60, height: 4, borderRadius: 2, background: "var(--color-border)", overflow: "hidden" }}>
-                          <div style={{ width: `${(r.commits / maxCommits) * 100}%`, height: "100%", background: "var(--color-primary)", borderRadius: 2 }} />
+                        <div style={{ width: 60 }}>
+                          <ProgressBar value={r.commits} max={maxCommits} color="primary" size="sm" />
                         </div>
                         <span style={{ fontWeight: 600, color: "var(--color-text-primary)", minWidth: 28, textAlign: "right" }}>{r.commits}</span>
                       </div>
