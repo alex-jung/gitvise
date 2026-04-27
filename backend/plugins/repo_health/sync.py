@@ -5,6 +5,8 @@ import fnmatch
 from datetime import datetime, timezone
 from typing import Optional
 
+from models.health_snapshot import HealthSnapshot
+
 import httpx
 
 from core.db import SessionLocal
@@ -232,6 +234,28 @@ async def run() -> None:
             db.commit()
             synced_count = len(repos_data) - skipped
             print(f"[repo-health] Synced {synced_count} repos (skipped {skipped})")
+
+            # Record a health snapshot for historical trend tracking
+            rows = db.query(Repository).all()
+            if rows:
+                now_utc = datetime.now(timezone.utc)
+                avg = round(sum(r.health_score for r in rows) / len(rows))
+                crit = sum(1 for r in rows if r.health_score < 40)
+                stale_count = sum(
+                    1 for r in rows
+                    if r.pushed_at and (now_utc - r.pushed_at.replace(tzinfo=timezone.utc) if r.pushed_at.tzinfo is None else now_utc - r.pushed_at).days > 30
+                    and not r.is_archived
+                )
+                unprot = sum(1 for r in rows if not r.has_branch_protection and not r.is_archived)
+                db.add(HealthSnapshot(
+                    recorded_at=now_utc,
+                    avg_score=avg,
+                    critical=crit,
+                    stale=stale_count,
+                    unprotected=unprot,
+                    total=len(rows),
+                ))
+                db.commit()
 
     except Exception:
         db.rollback()

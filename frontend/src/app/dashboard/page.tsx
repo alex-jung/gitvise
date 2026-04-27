@@ -86,7 +86,7 @@ function BigValue({ value, unit, color }: { value: string | number; unit?: strin
 
 function SubStat({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
       <span style={{
         fontSize: "var(--font-size-md)",
         fontWeight: 700,
@@ -137,33 +137,218 @@ interface RepoSummary {
   unprotected: number;
 }
 
-function RepoHealthCard() {
-  const [data, setData] = useState<RepoSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+interface HealthPoint {
+  date: string;
+  score: number;
+  critical: number;
+  stale: number;
+}
 
-  useEffect(() => {
-    apiGet<RepoSummary>("/api/core/repos/summary")
-      .then(setData).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+type HealthMetric = "score" | "critical" | "stale";
+type HealthRange  = 7 | 30;
 
-  const score = data?.avgHealthScore ?? 0;
-  const scoreColor =
-    score >= 70 ? "var(--color-success)" :
-    score >= 40 ? "var(--color-warning)" :
-    "var(--color-danger)";
+const METRIC_LABELS: Record<HealthMetric, string> = {
+  score:    "AVG SCORE",
+  critical: "CRITICAL",
+  stale:    "STALE",
+};
+
+function healthColor(score: number) {
+  if (score >= 70) return "var(--color-success)";
+  if (score >= 40) return "var(--color-warning)";
+  return "var(--color-danger)";
+}
+
+function TrendArrow({ delta }: { delta: number }) {
+  if (delta === 0) return (
+    <span style={{ color: "var(--color-text-muted)", fontSize: 13, fontFamily: "var(--font-mono)" }}>→</span>
+  );
+  const up = delta > 0;
+  return (
+    <span style={{
+      color: up ? "var(--color-success)" : "var(--color-danger)",
+      fontSize: 13,
+      fontFamily: "var(--font-mono)",
+      fontWeight: 600,
+    }}>
+      {up ? "↑" : "↓"}{Math.abs(delta)}
+    </span>
+  );
+}
+
+function HistorySparkline({ points, metric, color }: { points: HealthPoint[]; metric: HealthMetric; color: string }) {
+  const data = points.map(p => p[metric]);
+  if (data.length < 2) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
+          no history yet
+        </span>
+      </div>
+    );
+  }
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const W = 300;
+  const H = 60;
+  const pad = { t: 4, r: 2, b: 2, l: 2 };
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
+
+  const pts = data.map((v, i) => {
+    const x = pad.l + (i / (data.length - 1)) * w;
+    const y = pad.t + h - ((v - min) / range) * h;
+    return [x, y] as [number, number];
+  });
+
+  const polyline = pts.map(([x, y]) => `${x},${y}`).join(" ");
+  const fillPath = `M${pts[0][0]},${pts[0][1]} ${pts.map(([x, y]) => `L${x},${y}`).join(" ")} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
 
   return (
-    <DashboardCard title="Repository Health" icon={<Icon name="repo-health" size={15} />} action={<DetailLink href="/repos" />}>
-      {loading ? <SkeletonCard /> : data && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          <BigValue value={score} unit="/ 100" color={scoreColor} />
-          <ProgressBar value={score} max={100} colorAuto size="sm" animated />
-          <div style={{ display: "flex", gap: "var(--space-4)" }}>
-            <SubStat label="Repos" value={data.total} />
-            <SubStat label="Critical" value={data.critical} color={data.critical > 0 ? "var(--color-danger)" : undefined} />
-            <SubStat label="Stale" value={data.stale} color={data.stale > 0 ? "var(--color-warning)" : undefined} />
-            <SubStat label="Unprotected" value={data.unprotected} color={data.unprotected > 0 ? "var(--color-warning)" : undefined} />
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      style={{ width: "100%", height: "100%", display: "block" }}
+    >
+      <path d={fillPath} fill={color} fillOpacity={0.12} strokeWidth={0} />
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function RepoHealthCard() {
+  const [summary, setSummary]   = useState<RepoSummary | null>(null);
+  const [history, setHistory]   = useState<HealthPoint[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [metric, setMetric]     = useState<HealthMetric>("score");
+  const [range, setRange]       = useState<HealthRange>(30);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      apiGet<RepoSummary>("/api/core/repos/summary"),
+      apiGet<HealthPoint[]>(`/api/core/repos/health-history?days=${range}`),
+    ])
+      .then(([s, h]) => { setSummary(s); setHistory(h ?? []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [range]);
+
+  const score = summary?.avgHealthScore ?? 0;
+  const color = healthColor(score);
+
+  // Trend: diff between first and last point in history
+  const trend = history.length >= 2
+    ? history[history.length - 1][metric] - history[0][metric]
+    : 0;
+
+  const metricColor: Record<HealthMetric, string> = {
+    score:    color,
+    critical: "var(--color-danger)",
+    stale:    "var(--color-warning)",
+  };
+
+  const chartColor = metricColor[metric];
+
+  // Range toggle rendered into DashboardCard action slot
+  const rangeToggle = (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      {([7, 30] as HealthRange[]).map(d => (
+        <button
+          key={d}
+          onClick={() => setRange(d)}
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--font-size-xs)",
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            padding: "1px 6px",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--color-border)",
+            background: range === d ? "var(--color-primary)" : "transparent",
+            color: range === d ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+            cursor: "pointer",
+          }}
+        >
+          {d}d
+        </button>
+      ))}
+      <DetailLink href="/repos" />
+    </div>
+  );
+
+  return (
+    <DashboardCard
+      title="Repository Health"
+      icon={<Icon name="repo-health" size={15} />}
+      action={rangeToggle}
+      padding={false}
+    >
+      {loading ? (
+        <div style={{ padding: "var(--space-4)" }}><SkeletonCard /></div>
+      ) : summary && (
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+
+          {/* Score row + metric pills */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-3) var(--space-4) var(--space-2)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
+              <BigValue value={score} unit="/ 100" color={color} />
+              <TrendArrow delta={metric === "score" ? trend : -trend} />
+            </div>
+            {/* Metric selector */}
+            <div style={{ display: "flex", gap: 3 }}>
+              {(Object.keys(METRIC_LABELS) as HealthMetric[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMetric(m)}
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 9,
+                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    padding: "2px 5px",
+                    borderRadius: "var(--radius-sm)",
+                    border: `1px solid ${metric === m ? metricColor[m] : "var(--color-border)"}`,
+                    background: metric === m ? `color-mix(in srgb, ${metricColor[m]} 12%, transparent)` : "transparent",
+                    color: metric === m ? metricColor[m] : "var(--color-text-muted)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {METRIC_LABELS[m]}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Chart – fills remaining space */}
+          <div style={{ flex: 1, minHeight: 64, position: "relative" }}>
+            <HistorySparkline points={history} metric={metric} color={chartColor} />
+          </div>
+
+          {/* Stats row */}
+          <div style={{
+                          display: "flex",
+                          justifyContent: "space-around",
+            gap: "var(--space-4)",
+            padding: "var(--space-3) var(--space-4)",
+            borderTop: "1px solid var(--color-border-subtle)",
+          }}>
+            <SubStat label="Repos"       value={summary.total} />
+            <SubStat label="Critical"    value={summary.critical}    color={summary.critical > 0    ? "var(--color-danger)"  : undefined} />
+            <SubStat label="Stale"       value={summary.stale}       color={summary.stale > 0       ? "var(--color-warning)" : undefined} />
+            <SubStat label="Unprotected" value={summary.unprotected} color={summary.unprotected > 0 ? "var(--color-warning)" : undefined} />
+          </div>
+
         </div>
       )}
     </DashboardCard>

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -6,6 +6,7 @@ from sqlalchemy import select
 from api.helpers import as_utc
 from core.db import get_db
 from models.repo import Repository
+from models.health_snapshot import HealthSnapshot
 
 router = APIRouter(tags=["repos"])
 
@@ -110,3 +111,31 @@ def repos_summary(db: Session = Depends(get_db)):
         "lastSyncedAt": last_sync.isoformat() if last_sync else None,
         "attentionRepos": attention,
     }
+
+
+@router.get("/repos/health-history")
+def repos_health_history(
+    days: int = Query(30, ge=7, le=90),
+    db: Session = Depends(get_db),
+):
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    snapshots = (
+        db.execute(
+            select(HealthSnapshot)
+            .where(HealthSnapshot.recorded_at >= since)
+            .order_by(HealthSnapshot.recorded_at)
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "date": s.recorded_at.isoformat(),
+            "score": s.avg_score,
+            "critical": s.critical,
+            "stale": s.stale,
+            "unprotected": s.unprotected,
+            "total": s.total,
+        }
+        for s in snapshots
+    ]
